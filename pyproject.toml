@@ -1,0 +1,114 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name =  "dpyfunctionlib"
+authors = [
+    {name = "CrosswaveOmega", email = "xtream2pro@gmail.com"}
+]
+description = "A simple library for the purpose of providing a set of utilities that make it easier to invoke discord.py commands with OpenAI's Function Calling API"
+readme = "README.md"
+
+requires-python = ">=3.10"
+dynamic = ["version"]
+dependencies = [
+  'discord>=2.3.1'
+]
+
+[project.optional-dependencies]
+spark = [
+    "pyspark>=3.0.0"
+]
+test = [
+    "bandit[toml]==1.7.4",
+    "black==23.1.0",
+    "check-manifest==0.48",
+    "flake8-bugbear==23.3.12",
+    "flake8-docstrings",
+    "flake8-formatter_junit_xml",
+    "flake8",
+    "flake8-pyproject",
+    "pre-commit==2.17.0",
+    "pylint==2.17.0",
+    "pylint_junit",
+    "pytest-cov==3.0.0",
+    "pytest-mock<3.10.1",
+    "pytest-runner",
+    "pytest==7.2.2",
+    "pytest-github-actions-annotate-failures",
+    "shellcheck-py==0.9.0.2"
+]
+
+[tool.bandit]
+exclude_dirs = ["build","dist","tests","scripts"]
+number = 4
+recursive = true
+targets = "src"
+
+[tool.black]
+line-length = 120
+fast = true
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+fail_under = 100
+
+[tool.flake8]
+max-line-length = 120
+select = "F,E,W,B,B901,B902,B903"
+exclude = [
+    ".eggs",
+    ".git",
+    ".tox",
+    "nssm",
+    "obj",
+    "out",
+    "packages",
+    "pywin32",
+    "tests",
+    "swagger_client"
+]
+ignore = [
+    "E722",
+    "B001",
+    "W503",
+    "E203"
+]
+
+[tool.pyright]
+include = ["src"]
+exclude = [
+    "**/node_modules",
+    "**/__pycache__",
+]
+venv = "env311"
+
+reportMissingImports = true
+reportMissingTypeStubs = false
+
+pythonVersion = "3.11"
+pythonPlatform = "Linux"
+
+executionEnvironments = [
+  { root = "src" }
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "strict"
+pythonpath = [
+  "src"
+]
+testpaths = "tests"
+junit_family = "xunit2"
+markers = [
+    "integration: marks as integration test",
+    "notebooks: marks as notebook test",
+    "gpu: marks as gpu test",
+    "spark: marks tests which need Spark",
+    "slow: marks tests as slow",
+    "unit: fast offline tests",
+]
+
