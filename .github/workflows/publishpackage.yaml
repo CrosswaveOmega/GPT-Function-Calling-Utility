@@ -1,6 +1,6 @@
 name: Publish Package to PyPI on Push
 
-on: Push
+on: push
 
 jobs:
   build-n-publish:
