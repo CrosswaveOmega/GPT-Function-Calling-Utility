@@ -1,10 +1,60 @@
 [build-system]
 requires = ["setuptools", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
+[project]
+name = 'gptfunctionutil_comega'
+version = 0.1
+license = MIT
+authors = {mame="Crosswave Omega",email= xtream2pro@gmail.com}
+description = A simple package for the purpose of providing a set of utilities that make it easier to invoke python methods and discord.py commands with the OpenAI Function Calling API
+readme = 'README.md'
+
+keywords = discord.py, OpenAI, Function Calling API
+[project.urls]
+"Homepage"= "https://github.com/CrosswaveOmega/GPT-Function-Calling-Utility"
+
+[options]
+python_requires = >=3.10
+packages = find:
+install_requires =
+    discord.py
+
+[options.packages.find]
+exclude =
+    tests
+    docs
 
 
 
+[project.optional-dependencies]
+spark = [
+    "pyspark>=3.0.0"
+]
+test = [
+    "bandit[toml]==1.7.4",
+    "black==23.1.0",
+    "check-manifest==0.48",
+    "flake8-bugbear==23.3.12",
+    "flake8-docstrings",
+    "flake8-formatter_junit_xml",
+    "flake8",
+    "flake8-pyproject",
+    "pre-commit==2.17.0",
+    "pylint==2.17.0",
+    "pylint_junit",
+    "pytest-cov==3.0.0",
+    "pytest-mock<3.10.1",
+    "pytest-runner",
+    "pytest==7.2.2",
+    "pytest-github-actions-annotate-failures",
+    "shellcheck-py==0.9.0.2"
+]
 
+[tool.bandit]
+exclude_dirs = ["build","dist","tests","scripts"]
+number = 4
+recursive = true
+targets = "src"
 
 [tool.black]
 line-length = 120
