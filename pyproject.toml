@@ -3,10 +3,6 @@ requires = ["setuptools", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 
-[project.optional-dependencies]
-spark = [
-    "pyspark>=3.0.0"
-]
 test = [
     "bandit[toml]==1.7.4",
     "black==23.1.0",
