@@ -2,19 +2,6 @@
 requires = ["setuptools", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
-[project]
-name =  "dpyfunctionlib"
-authors = [
-    {name = "CrosswaveOmega", email = "xtream2pro@gmail.com"}
-]
-description = "A simple library for the purpose of providing a set of utilities that make it easier to invoke discord.py commands with OpenAI's Function Calling API"
-readme = "README.md"
-
-requires-python = ">=3.10"
-dynamic = ["version"]
-dependencies = [
-  'discord>=2.3.1'
-]
 
 [project.optional-dependencies]
 spark = [
@@ -40,11 +27,7 @@ test = [
     "shellcheck-py==0.9.0.2"
 ]
 
-[tool.bandit]
-exclude_dirs = ["build","dist","tests","scripts"]
-number = 4
-recursive = true
-targets = "src"
+
 
 [tool.black]
 line-length = 120
