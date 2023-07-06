@@ -3,7 +3,7 @@ requires = ["setuptools", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 [project]
 name = 'gptfunctionutil'
-version = "0.1.4"
+version = "0.1.5"
 license = {file = "LICENSE"}
 authors = [{name="Crosswave Omega",email= "xtream2pro@gmail.com"}]
 description = "A simple package for the purpose of providing a set of utilities that make it easier to invoke python methods and discord.py commands with the OpenAI Function Calling API"
@@ -13,7 +13,7 @@ keywords = ['discord.py', 'OpenAI', 'Function Calling API']
 requires-python = '>=3.10'
 
 dependencies = [
-    "discord>=2.3.1"
+    "discord>=2.1.0"
 ]
 [project.urls]
 "Homepage"= "https://github.com/CrosswaveOmega/GPT-Function-Calling-Utility"

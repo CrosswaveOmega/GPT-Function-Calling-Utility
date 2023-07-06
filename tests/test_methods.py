@@ -68,6 +68,8 @@ async def test_command_function_load(bot):
         assert 'test_command' in schema
         assert 'noninvoke_test_command' in registered_commands
 
+
+
 # Example usage of the bot fixture
 @pytest.mark.asyncio
 async def test_bot(bot):

@@ -14,8 +14,6 @@ from discord.ext.commands import (
     CheckFailure
 )
 
-def hello_world():
-    print("tester")
 
 class CommandSingleton:
     _instance = None
@@ -129,6 +127,7 @@ class GPTFunctionLibrary:
                 if schema.get('parameters',None)!=None:
                     functions_with_schema.append(schema)
         return functions_with_schema
+
     def expression_match(self, function_args: str):
         '''because sometimes, the API returns an expression and not a single integer.'''
         if self.do_expression and self.my_math_parser!=None:
