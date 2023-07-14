@@ -7,6 +7,7 @@ from enum import Enum, EnumMeta
 
 from datetime import datetime
 
+from .errors import *
 
 
 class CommandSingleton:
@@ -249,9 +250,8 @@ class GPTFunctionLibrary:
         '''parse the args within function_dict, and apply any needed corrections to the JSON.'''
         print(function_dict)
         function_name = function_dict.get('name')
+        function_args = function_dict.get('arguments', None)
         if function_name in self.FunctionDict:
-            method=self.FunctionDict[function_name]
-            function_args = function_dict.get('arguments', None)
             if isinstance(function_args,str):
                 #Making it so it won't break on poorly formatted function arguments.
                 function_args=function_args.replace("\\n",'\n')
@@ -269,16 +269,21 @@ class GPTFunctionLibrary:
                 except json.JSONDecodeError as e:
                     #Something went wrong while parsing, return where.
                     output=f"JSONDecodeError: {e.msg} at line {e.lineno} column {e.colno}: `{function_args_str[e.pos]}`"
-                    raise json.JSONDecodeError(msg=f"{output}\n{function_args_str}", doc=function_args_str,pos=1)
+                    raise ArgDecodeError(function_name=function_name,arguments=function_args_str,msg=f"{output}", er=e)
             return function_name,function_args
-        raise Exception(f"Function '{function_name}' not found.")
+        raise FunctionNotFound(function_name=function_name,arguments=function_args)
 
     def convert_args(self, function_name:str, function_args:Dict[str, Any]) -> Dict[str, Any]:
         '''Preform any needed conversion of the function arguments.'''
         libmethod=self.FunctionDict[function_name]
         return libmethod.convert_args(function_args)
 
-
+    def default_callback(self,function_name:str,function_args:str="NONE")->str:
+        '''This is called whenever an invalid function is called.'''
+        output=f"{function_name} is not a valid function."
+        function_args=function_args.replace("\\n",'\n')
+        output+="\n```{function_args}```"
+        return output
     def call_by_dict(self, function_dict: Dict[str, Any]) -> Any:
         """
         Call a function based on the provided dictionary.
@@ -294,7 +299,11 @@ class GPTFunctionLibrary:
         """
         try:
             function_name,function_args=self.parse_name_args(function_dict)
-        except Exception as e:
+        except GPTLibError as e:
+            if isinstance(e, FunctionNotFound):
+                '''Invoke a default function so something is returned...'''
+                return self.default_callback(e.function_name,e.arguments)
+
             result=str(e)
             return result
         libmethod = self.FunctionDict.get(function_name)

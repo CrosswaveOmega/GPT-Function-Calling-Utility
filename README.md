@@ -1,8 +1,9 @@
 # GPT Function Calling Utility
 
-The GPT Function Calling Utility is a Python package designed to streamline the process of calling Python functions using OpenAI's Function Calling API.
+The GPT Function Calling Utility is a Python package designed to streamline the process of calling Python methods using OpenAI's Function Calling API, without wrapping around the OpenAI library.
 
 Please note that GPT Function Calling Utility does not directly make calls to OpenAI's API, but rather helps with function modeling and formatting for function invocation.
+
 ##Installation
 ```
 python -m pip install -U gptfunctionutil
@@ -10,19 +11,20 @@ python -m pip install -U gptfunctionutil
 ```
 ## Key Features
 
-- **Simplified Function Modeling**: The package provides a straightforward way to define and format Python functions to be used with OpenAI's Function Calling API. By subclassing the `GPTFunctionLibrary` class, you can quickly create a set of callable methods to be sent alongwith calls to OpenAi's Chat Completion.
+- **Simplified Function Modeling**: This package utilizes it's `GPTFunctionLibrary` class to define sets of callable methods to be sent to OpenAI's Chat Completion endpoint, and can then invoke methods based on the returned function_call attribute.
 
-- **Decorate Invokable Functions**: OpenAI's Function Calling api needs a json schema of a functions name, description, and parameters.  This utility uses two decorators, (`@AILibFunction`) and (`@LibParam`) and type annotation to create this schema for functions you want to use with the API.
-  + set a display name, description, with (`@AILibFunction`).  You can also specify required parameters with this decorator, but it's not required.
-  + apply small descriptions to arguments with (`@LibParam`).
-These decorators enable clear documentation and help streamline the function formatting process.
+- **Decorate Invokable Functions**: OpenAI's Function Calling Feature needs a JSON object of every single function's name, description, and parameters.  This utility uses two decorators, (`@AILibFunction`) and (`@LibParam`), as well as type annotation to create this schema for functions you want to use with the API.
+  + set a display name and description with (`@AILibFunction`).  You can also specify required parameters with this decorator, but it's not required.
+  + apply small descriptions to arguments with (`@LibParam`), to inform the API on what it does.
+
 
 - **Parameter Descriptions and Typing:** To ensure clarity and facilitate proper function formatting, GPT Function Calling Utility requires that all parameters intended to be passed into the AI have an applied type;  strings, integers, floats, and bools.  parameters with a default value are automatically However, the utility is capable of converting some more complex data types to and from a json schema, such as datetimes and Literals, with support for custom converters coming at a later date.
 
 - **Integration with Discord.py**: This utility was intended to be used with life as a discord.py utility, and can be easily integrated with discord.py bots.
    +Simply import gptfunctionutil into your Discord bot project, and decorate your commands with `@LibParam` and `@AILibFunction`.  After passing the Commands into a GPTFunctionLibrary subclass with  `add_in_commands(your_bot_object_here)`, your bot commands will become invokable in the same way as a decorated GPTFunctionLibrary method.
 
-- **Schema Generation for API Calls**: Before making a call to the OpenAI chat/completion endpoint, the utility offers a convenient method, `mylib.get_schema()`, to extract the formatted functions as a list of dictionaries. This schema is then passed as the `functions` field in the API call. If the AI determines that it should invoke a function call, the returned `function_call` dictionary is used with `mylib.call_by_dict(function_call)` to invoke the corresponding function with the provided arguments.
+- **Schema Generation for API Calls**: Before making a call to the OpenAI chat/completion endpoint, the utility has a `get_schema()` method to extract the formatted functions as a list of dictionaries. This schema is then passed as the `functions` field in the ChatCompletion call. If the AI determines that it should invoke a function call, the returned `function_call` dictionary is used with `call_by_dict(function_call)` to invoke the corresponding function with the provided arguments.
+   +The method also checks if there is a function by that name
 
 ## Usage Example
 

@@ -14,7 +14,7 @@ from discord.ext.commands import (
     CheckFailure
 )
 from .functionlib import GPTFunctionLibrary, LibCommand
-
+from .errors import *
 class CommandSingleton:
     _instance = None
     _commands = {}
@@ -241,7 +241,10 @@ class GPTFunctionLibraryDisc(GPTFunctionLibrary):
         """
         try:
             function_name,function_args=self.parse_name_args(function_dict)
-        except Exception as e:
+        except GPTLibError as e:
+            if isinstance(e, FunctionNotFound):
+                return self.default_callback(e.function_name,e.arguments)
+
             result=str(e)
             return result
         print(function_name, function_args,len(function_args))

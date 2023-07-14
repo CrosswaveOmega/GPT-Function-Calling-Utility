@@ -4,6 +4,7 @@ from __future__ import annotations
 __version__ = "0.1.7"
 import importlib.util
 
+from .errors import *
 discord_install = importlib.util.find_spec("discord")
 if discord_install is not None:
     try:
