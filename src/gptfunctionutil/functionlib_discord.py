@@ -14,6 +14,7 @@ from discord.ext.commands import (
     CheckFailure
 )
 from .functionlib import GPTFunctionLibrary, LibCommand
+from .converter import ConvertStatic
 from .errors import *
 class CommandSingleton:
     _instance = None
@@ -89,9 +90,9 @@ class LibCommandDisc(LibCommand):
         paramdict={}
         param_decorators={}
         if self.comm_type=='command':
-            if 'parameter_decorators' in func.extras:
+            if hasattr(func,'parameter_decorators'): #if 'parameter_decorators' in func.extras:
                 paramdict=func.clean_params
-                param_decorators=func.extras['parameter_decorators']
+                param_decorators=func.parameter_decorators#['parameter_decorators']
         else:
             sig = inspect.signature(func)
             if hasattr(func,'parameter_decorators'):
@@ -102,34 +103,15 @@ class LibCommandDisc(LibCommand):
             { 'parameters': {'type': 'object','properties': {},'required': []}}
         )
         for param_name, param in paramdict.items():
+            decs=param_decorators.get(param_name, '')
 
-            if isinstance(param.annotation, str):
-                typename = param.annotation  # Treat the string annotation as a regular string
-            else:
-                typename = param.annotation.__name__  # Access the __name__ attribute of the type object
+            param_info, converter=ConvertStatic.parameter_into_schema(param_name,param,dec=decs)
 
-            oldtypename=typename
-            if typename in substitutions:
-                typename=substitutions[typename]
-            else:
-                continue
-            param_info = {
-                'type': typename,
-                'description': param_decorators.get(param_name, '')
-            }
-            if self.comm_type!='command':
-                if typename == '_empty':
-                    continue
-                if typename == 'Context':
-                    continue
-            if oldtypename== 'datetime':
-                param_info['format']='date-time'
-            if oldtypename == 'Literal':
-                literal_values = param.annotation.__args__
-                param_info['enum'] = literal_values
-            self.function_schema['parameters']['properties'][param_name] = param_info
-            if param.default == inspect.Parameter.empty or param_name in self.required:
-                self.function_schema['parameters']['required'].append(param_name)
+            if param_info is not None:
+                self.param_converters[param_name]=converter
+                self.function_schema['parameters']['properties'][param_name] = param_info
+                if param.default == inspect.Parameter.empty or param_name in self.required:
+                    self.function_schema['parameters']['required'].append(param_name)
 
 
     async def invoke_command(self,ctx:Context,function_args:Dict[str,Any]) -> Any:

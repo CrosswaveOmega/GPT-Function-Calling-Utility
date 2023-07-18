@@ -8,7 +8,7 @@ from enum import Enum, EnumMeta
 from datetime import datetime
 
 from .errors import *
-
+from .converter import ConvertStatic
 
 class CommandSingleton:
     _instance = None
@@ -70,7 +70,9 @@ class LibCommand:
         self.function_schema=my_schema
         self.required=required
         #if 'parameter_decorators' in func.extras:
+        self.param_converters={}
         self.param_iterate()
+
         self.enabled=enabled
         self.force_words=force_words
     def param_iterate(self):
@@ -91,38 +93,48 @@ class LibCommand:
             { 'parameters': {'type': 'object','properties': {},'required': []}}
         )
         for param_name, param in paramdict.items():
+            decs=param_decorators.get(param_name, '')
 
-            if isinstance(param.annotation, str):
-                typename = param.annotation  # Treat the string annotation as a regular string
-            else:
-                typename = param.annotation.__name__  # Access the __name__ attribute of the type object
+            param_info, converter=ConvertStatic.parameter_into_schema(param_name,param,dec=decs)
 
-            oldtypename=typename
-            if typename in substitutions:
-                typename=substitutions[typename]
-            else:
-                continue
-            param_info = {
-                'type': typename,
-                'description': param_decorators.get(param_name, '')
-            }
-            if typename in to_ignore:
-                continue
-            if oldtypename== 'datetime':
-                param_info['format']='date-time'
-            if oldtypename == 'Literal':
-                literal_values = param.annotation.__args__
-                param_info['enum'] = literal_values
-            self.function_schema['parameters']['properties'][param_name] = param_info
-            if param.default == inspect.Parameter.empty or param_name in self.required:
-                self.function_schema['parameters']['required'].append(param_name)
+            if param_info is not None:
+                self.param_converters[param_name]=converter
+                self.function_schema['parameters']['properties'][param_name] = param_info
+                if param.default == inspect.Parameter.empty or param_name in self.required:
+                    self.function_schema['parameters']['required'].append(param_name)
+
+            # if isinstance(param.annotation, str):
+            #     typename = param.annotation  # Treat the string annotation as a regular string
+            # else:
+            #     typename = param.annotation.__name__  # Access the __name__ attribute of the type object
+
+            # oldtypename=typename
+            # if typename in substitutions:
+            #     typename=substitutions[typename]
+            # else:
+            #     continue
+            # param_info = {
+            #     'type': typename,
+            #     'description': param_decorators.get(param_name, '')
+            # }
+            # if typename in to_ignore:
+            #     continue
+            # if oldtypename== 'datetime':
+            #     param_info['format']='date-time'
+            # if oldtypename == 'Literal':
+            #     literal_values = param.annotation.__args__
+            #     param_info['enum'] = literal_values
+            # self.function_schema['parameters']['properties'][param_name] = param_info
+            # if param.default == inspect.Parameter.empty or param_name in self.required:
+            #     self.function_schema['parameters']['required'].append(param_name)
 
     def convert_args(self,function_args: Dict[str, Any]) -> Dict[str, Any]:
-        '''Preform any needed conversion of the function argument dictionary, such as
-        converting a string to a datetime object.
+        '''Validate and convert all arguments within function_args
+        with the Converters.
 
         Args:
-            function_args (Dict[str, Any]): A dictionary containing the function arguments.
+            function_args (Dict[str, Any]): A dictionary containing the function arguments, returned by
+            gpt-3.5-turbo-0613
 
         Returns:
             Dict[str, Any]: The converted function argument dictionary.
@@ -131,14 +143,9 @@ class LibCommand:
         parameters=schema['parameters']
         for i, v in parameters['properties'].items():
             if i in function_args:
-                form=v.get('format',None)
-                if not form: continue
-                if form=='date-time':
-                    datetime_format = "%Y-%m-%dT%H:%M:%S%z"
-                    converted_datetime = datetime.strptime(
-                        function_args[i], datetime_format
-                        )
-                    function_args[i]=converted_datetime
+                result=ConvertStatic.schema_validate(i,function_args[i],v)
+
+                function_args[i]=result
         return function_args
 
     def check_force(self,query:str) -> bool:
@@ -316,9 +323,35 @@ class GPTFunctionLibrary:
         else:
             raise AttributeError(f"Method '{function_name}' not found or not callable.")
 
+def genspec(name:str,description:str,**kwargs):
+    spec={}
+    spec[name]={}
+    spec[name]['description']=description
+    spec[name].update(kwargs)
+    return spec
+def LibParamSpec(name:str,description:str,**kwargs):
+    """
+    A much more advanced variant of LibParam.  Set a function's description as well as
+    additional arguments depending on the schema's type.
+    For instance, you can restrict a string's length with "minLength" and  "maxLength",
+    set the minimum and maximum of a number with 'minimum' and 'maximum', and more.
 
-
-
+    AILibFunctions without this decorator will not be sent to the AI.
+    Args:
+        name: name of the parameter to apply description to.
+        description: description to be applied to the parameter.
+        **kwargs: a function's parameters, and the description to be applied to each.
+    Returns:
+        The decorated function.
+    """
+    def decorator(func: callable) -> callable:
+        if not hasattr(func, "parameter_decorators"):
+            func.parameter_decorators = {}
+        gen=genspec(name,description,**kwargs)
+        print(gen)
+        func.parameter_decorators.update(gen)
+        return func
+    return decorator
 
 def LibParam(**kwargs: Any) -> Any:
     """
