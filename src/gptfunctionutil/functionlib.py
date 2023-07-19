@@ -143,8 +143,9 @@ class LibCommand:
         parameters=schema['parameters']
         for i, v in parameters['properties'].items():
             if i in function_args:
-                result=ConvertStatic.schema_validate(i,function_args[i],v)
-
+                converter=self.param_converters[i]
+                result=ConvertStatic.schema_validate(i,function_args[i],v,converter)
+                print(i,result)
                 function_args[i]=result
         return function_args
 

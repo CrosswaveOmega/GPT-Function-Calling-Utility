@@ -313,12 +313,11 @@ class ConvertStatic():
         return param_info
 
     @staticmethod
-    def schema_validate(param_name:str,param:inspect.Parameter,schema:Union[str,Dict[str,any]]):
-        s_type=schema['type']
+    def schema_validate(param_name:str,value:any,schema:Union[str,Dict[str,any]],converter:Converter):
         typename=None
-        if s_type in substitutions:
-            typename=substitutions[typename]
+        if converter!=None:
+            typename=converter
         else: return None
-
-        mod=typename().from_schema(param,schema)
+        print(typename)
+        mod=typename().from_schema(value,schema)
         return mod
