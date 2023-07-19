@@ -75,6 +75,7 @@ class LibCommandDisc(LibCommand):
 
             self.function_schema=my_schema
             self.required=required
+            self.param_converters={}
             #if 'parameter_decorators' in func.extras:
             self.param_iterate()
             self.enabled=enabled
@@ -248,7 +249,6 @@ class GPTFunctionLibraryDisc(GPTFunctionLibrary):
 
 
 
-
 def LibParam(**kwargs: Any) -> Any:
     """
     Decorator to add descriptions to any valid parameter inside a GPTFunctionLibary method or discord.py bot command.
@@ -258,20 +258,13 @@ def LibParam(**kwargs: Any) -> Any:
     Returns:
         The decorated function.
     """
-    def decorator(func: Union[Command,callable]) -> callable:
-        if isinstance(func,Command):
-            print(f"{func} is a command.")
-            if not 'parameter_decorators' in func.extras:
-                func.extras.setdefault('parameter_decorators',{})
-            func.extras['parameter_decorators'].update(kwargs)
-            print('new params:',func.extras['parameter_decorators'])
-            return func
-        else:
-            if not hasattr(func, "parameter_decorators"):
-                func.parameter_decorators = {}
-            func.parameter_decorators.update(kwargs)
-            return func
+    def decorator(func: callable) -> callable:
+        if not hasattr(func, "parameter_decorators"):
+            func.parameter_decorators = {}
+        func.parameter_decorators.update(kwargs)
+        return func
     return decorator
+
 
 def AILibFunction(name: str, description: str, required:List[str]=[],force_words:List[str]=[], enabled=True) -> Any:
     """
