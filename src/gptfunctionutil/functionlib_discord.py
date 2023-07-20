@@ -1,7 +1,7 @@
 import inspect
 import json
 import re
-from typing import Any, Coroutine, Dict, List, Union
+from typing import Any, Coroutine, Dict, List, Optional, Union
 
 from enum import Enum, EnumMeta
 
@@ -13,7 +13,7 @@ from discord.ext.commands import (
     CommandNotFound,
     CheckFailure
 )
-from .functionlib import GPTFunctionLibrary, LibCommand
+from .functionlib import GPTFunctionLibrary, LibCommand, genspec
 from .converter import ConvertStatic
 from .errors import *
 class CommandSingleton:
@@ -99,7 +99,7 @@ class LibCommandDisc(LibCommand):
             if hasattr(func,'parameter_decorators'):
                 paramdict=sig.parameters
                 param_decorators=func.parameter_decorators
-        print("THE type is",self.comm_type)
+        #print("THE type is",self.comm_type)
         self.function_schema.update(
             { 'parameters': {'type': 'object','properties': {},'required': []}}
         )
@@ -137,7 +137,6 @@ class LibCommandDisc(LibCommand):
         if len(function_args)>0:
             for i, v in command.clean_params.items():
                 if not i in function_args:
-                    print(i,v)
                     function_args[i]=v.default
             ctx.kwargs=(function_args)
         if ctx.command is not None:
@@ -199,7 +198,6 @@ class GPTFunctionLibraryDisc(GPTFunctionLibrary):
         want to use the commands.
         """
         for command in bot.walk_commands():
-            print(command.qualified_name)
             if "libcommand" in command.extras:
                 print(command.qualified_name, command.extras["libcommand"])
                 function_name = command.qualified_name
@@ -248,6 +246,29 @@ class GPTFunctionLibraryDisc(GPTFunctionLibrary):
                 raise AttributeError(f"Method '{function_name}' not found or not callable.")
 
 
+def LibParamSpec(name:str,description:Optional[str]=None,**kwargs):
+    """
+    A much more advanced variant of LibParam.  Set a function's description as well as
+    additional arguments depending on the schema's type.
+    For instance, you can restrict a string's length with "minLength" and  "maxLength",
+    set the minimum and maximum of a number with 'minimum' and 'maximum', and more.
+
+    AILibFunctions without this decorator will not be sent to the AI.
+    Args:
+        name: name of the parameter to apply description to.
+        description: description to be applied to the parameter.
+        **kwargs: a function's parameters, and the description to be applied to each.
+    Returns:
+        The decorated function.
+    """
+    def decorator(func: callable) -> callable:
+        if not hasattr(func, "parameter_decorators"):
+            func.parameter_decorators = {}
+        gen=genspec(name,description,**kwargs)
+        print(gen)
+        func.parameter_decorators.update(gen)
+        return func
+    return decorator
 
 def LibParam(**kwargs: Any) -> Any:
     """

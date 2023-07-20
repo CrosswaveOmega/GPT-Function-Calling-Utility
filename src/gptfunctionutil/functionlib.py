@@ -28,18 +28,10 @@ class CommandSingleton:
     def load_command(name):
         return CommandSingleton._commands.get(name, None)
 
-substitutions={
-    'str':'string',
-    'int':'integer',
-    'bool':'boolean',
-    'float':'number',
-    'datetime':'string',
-    'Literal':'string'
-}
 
-to_ignore=['_empty','Context']
+
 class LibCommand:
-    '''This class is a container for functions, coroutines, and discord.py Commands
+    '''This class is a container for functions.
     that have been annotated with the LibParam and the AILibFunction decorators,
     wrapping them up with attributes that help the GPTFunctionLibary invoke them.'''
     def __init__(self, func: Union[callable,Coroutine], name: str, description: str, required:List[str]=[],force_words:List[str]=[], enabled=True):
@@ -141,9 +133,11 @@ class LibCommand:
         '''
         schema=self.function_schema
         parameters=schema['parameters']
+        print('args',function_args)
         for i, v in parameters['properties'].items():
             if i in function_args:
                 converter=self.param_converters[i]
+                print('typehere','converter')
                 result=ConvertStatic.schema_validate(i,function_args[i],v,converter)
                 print(i,result)
                 function_args[i]=result
@@ -316,6 +310,7 @@ class GPTFunctionLibrary:
             return result
         libmethod = self.FunctionDict.get(function_name)
         if libmethod.comm_type=='callable':
+            function_args=libmethod.convert_args(function_args)
             if len(function_args)>0:
                 #for i, v in function_args.items():
                 #    print("st",i,v)

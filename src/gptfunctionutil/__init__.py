@@ -12,7 +12,7 @@ if discord_install is not None:
         from .functionlib_discord import LibCommandDisc as LibCommand
         from .functionlib_discord import GPTFunctionLibraryDisc as GPTFunctionLibrary
         from .functionlib_discord import AILibFunction
-        from .functionlib_discord import LibParam
+        from .functionlib_discord import LibParam, LibParamSpec
     except ImportError:
         print('Something went wrong importing discord')
         from .functionlib import LibCommand as LibCommand

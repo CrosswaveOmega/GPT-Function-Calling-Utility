@@ -44,11 +44,34 @@ async def test_command_function_errorsload():
     result=testlib.call_by_dict({'name':'notafunction','arguments':"{\"comment\":\"This is an interesting, amusing remark.\"}"})
     assert 'is not a valid function' in result
 
-import pytest
 import inspect
 from typing import Any, Dict, List, Optional, Union
 from inspect import Parameter
 import re
+@pytest.mark.asyncio
+async def test_advanced_objects():
+    class MyTestLib2(GPTFunctionLibrary):
+        @AILibFunction(name='get_time',description='Get the current time and day in UTC.')
+        @LibParam(comment='An interesting, amusing remark.')
+        def get_time(self,comment:str):
+            #This is an example of a decorated coroutine command.
+            return f"{comment}"
+        @AILibFunction(name='set_alarm',description='Set an alarm.')
+        @LibParam(alarm_time='Datetime to set this alarm at.')
+        def set_alarm(self,alarm_time:datetime):
+            #This is an example of a decorated coroutine command.
+            result=f"{str(alarm_time.date())}"
+            print(result)
+            return result
+    #pass
+    testlib2=MyTestLib2()
+    schema = testlib2.get_schema()
+    print(schema)
+    assert 'name' in schema[0]
+    assert schema[1]['name'] == 'set_alarm'
+
+    result=testlib2.call_by_dict({'name':'set_alarm','arguments':"{\"alarm_time\":\"2018-11-13T20:20:39+00:00\"}"})
+    assert result == "2018-11-13"
 
 
 @pytest.mark.asyncio

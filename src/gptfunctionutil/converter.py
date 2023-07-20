@@ -4,11 +4,15 @@ from inspect import Parameter
 
 from datetime import datetime
 
-
+from .errors import (
+    ConversionError,
+    ConversionFromError
+)
 
 class Converter():
     """
-    To convert parameter signatures into extra data.
+    To convert parameter signatures into a JSON Schema friendly representaion, and to
+    convert/verify in return.
     """
 
     def to_schema(self, param:inspect.Parameter,dec:Dict[str,Any])->Dict[str,Any]:
@@ -30,7 +34,9 @@ class Converter():
         raise NotImplementedError('Derived classes need to implement this.')
     def from_schema(self,value:Any,schema:Dict[str,Any])->Any:
         """
-        Convert value into the correct type using the schema Dictionary as a referencean variable of a certain type based on Converter.
+        Convert value into the correct type using the schema Dictionary as a reference.
+        More important for more complex objects.
+
 
         Parameters
         -----------
@@ -52,8 +58,6 @@ class BooleanConverter(Converter):
         schema: Dict[str, Any] = {
             "type": "boolean"
         }
-
-
         return schema
 
     def from_schema(self, value: Any, schema: Dict[str, Any]) -> Optional[str]:
@@ -99,11 +103,14 @@ class StringConverter(Converter):
 class DatetimeConverter(StringConverter):
     def to_schema(self, param: inspect.Parameter, dec: Dict[str, Any]) -> Dict[str, Any]:
         schema=super().to_schema(param,dec)
-        schema['format']='datetime'
+        schema['format']='date-time'
+        print('thisform',schema)
+        return schema
 
     def from_schema(self, value: Any, schema: Dict[str, Any]) -> Any:
         value=super().from_schema(value,schema)
         form=schema.get('format',None)
+        print('form',form)
         if not form:
             raise ValueError("No format found.")
         if form=='date-time':
@@ -158,49 +165,7 @@ class NumericConverter(Converter):
 
         return value
 
-class NumericConverter(Converter):
 
-    def to_schema(self, param: inspect.Parameter, dec: Dict[str, Any]) -> Dict[str, Any]:
-        schema: Dict[str, Any] = {}
-
-        if 'minimum' in dec:
-            schema['minimum'] = dec['minimum']
-        if 'maximum' in dec:
-            schema['maximum'] = dec['maximum']
-        if 'exclusiveMinimum' in dec:
-            schema['exclusiveMinimum'] = dec['exclusiveMinimum']
-        if 'exclusiveMaximum' in dec:
-            schema['exclusiveMaximum'] = dec['exclusiveMaximum']
-        if 'multipleOf' in dec:
-            schema['multipleOf'] = dec['multipleOf']
-
-        if param.annotation == int:
-            schema['type'] = 'integer'
-        else:
-            schema['type'] = 'number'
-
-        return schema
-
-    def from_schema(self, value: Any, schema: Dict[str, Any]) -> Any:
-        if not isinstance(value, (int, float)):
-            raise ValueError("Value is not of type 'int' or 'float'.")
-
-        if 'minimum' in schema and value < schema['minimum']:
-            raise ValueError("Value is below the minimum constraint.")
-
-        if 'maximum' in schema and value > schema['maximum']:
-            raise ValueError("Value exceeds the maximum constraint.")
-
-        if 'exclusiveMinimum' in schema and value <= schema['exclusiveMinimum']:
-            raise ValueError("Value does not meet the exclusiveMinimum constraint.")
-
-        if 'exclusiveMaximum' in schema and value >= schema['exclusiveMaximum']:
-            raise ValueError("Value does not meet the exclusiveMaximum constraint.")
-
-        if 'multipleOf' in schema and value % schema['multipleOf'] != 0:
-            raise ValueError("Value does not meet the multipleOf constraint.")
-
-        return value
 class ArrayConverter(Converter):
     def to_schema(self, param: inspect.Parameter, dec: Dict[str, Any]) -> Dict[str, Any]:
         schema: Dict[str, Any] = {
@@ -256,6 +221,7 @@ class ArrayConverter(Converter):
             return {}  # Empty schema for custom types
 
 class LiteralConverter(Converter):
+    '''turns Literals into enums.'''
     def to_schema(self, param: inspect.Parameter, dec: Dict[str, Any]) -> Dict[str, Any]:
         schema: Dict[str, Any] = {}
         literal_values = param.annotation.__args__
@@ -266,8 +232,9 @@ class LiteralConverter(Converter):
 
     def from_schema(self, value: Any, schema: Dict[str, Any]) -> Any:
         if value not in schema['enum']:
-            raise ValueError("Value does not match any of the literal values.")
+            raise ValueError(f"Value {value} does not match any of the literal values.")
         return value
+
 to_ignore=['_empty','Context']
 substitutions={
     'str':StringConverter,
@@ -295,29 +262,24 @@ class ConvertStatic():
         if typename in substitutions:
             typename=substitutions[typename]
         else: return None, None
-        param_info = {
-
-        }
+        param_info = {}
         if decs.get('description', ''):
             param_info['description']=decs.get('description', '')
         mod=typename().to_schema(param,decs)
         param_info.update(mod)
+        print('typename',typename)
         return param_info, typename
-        if typename in to_ignore:
-            return None
-        if oldtypename== 'datetime':
-            param_info['format']='date-time'
-        if oldtypename == 'Literal':
-            literal_values = param.annotation.__args__
-            param_info['enum'] = literal_values
-        return param_info
+
 
     @staticmethod
     def schema_validate(param_name:str,value:any,schema:Union[str,Dict[str,any]],converter:Converter):
         typename=None
         if converter!=None:
             typename=converter
-        else: return None
-        print(typename)
-        mod=typename().from_schema(value,schema)
+        else:
+            raise ConversionFromError(param_name,value,schema,msg='No converter found.')
+        try:
+            mod=typename().from_schema(value,schema)
+        except Exception as e:
+            raise ConversionFromError(param_name,value,schema,str(e)) from e
         return mod

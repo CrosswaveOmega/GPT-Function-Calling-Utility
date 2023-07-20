@@ -36,3 +36,26 @@ class InvalidFuncArg(GPTLibError):
 
     def __init__(self, message):
         super().__init__(message)
+
+class ConversionError(GPTLibError):
+    """Exception raised when Something went wrong when converting/validating a responce."""
+
+    def __init__(self, message):
+        super().__init__(message)
+
+class ConversiontToError(ConversionError):
+
+    def __init__(self, msg=''):
+        super().__init__(msg)
+
+
+
+class ConversionFromError(ConversionError):
+
+    def __init__(self, param_name='', value='', schema={}, msg=''):
+        self.param_name=param_name
+        self.value=value
+        self.schema=schema
+        message=f"{msg} Param:{param_name}. Value{value}.\n Schema:{str(schema)}"
+        super().__init__(message)
+
