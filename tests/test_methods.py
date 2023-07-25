@@ -203,9 +203,43 @@ async def test_array_converter_from_schema():
     assert converter.from_schema(value, schema) == expected_result
 
 @pytest.mark.asyncio
-async def test_array_converter_from_schema_with_invalid_value():
-    converter = ArrayConverter()
-    value = 'test'
-    schema = {'type': 'array'}
-    with pytest.raises(ValueError):
-        converter.from_schema(value, schema)
+async def test_check_converter():
+    class User:
+        def __init__(self, user):
+            self.user = user
+
+        def __str__(self):
+            return str(self.user)
+
+        def __repr__(self):
+            return str(self.user)
+    class UserConverter(StringConverter):
+        def to_schema(self, param: inspect.Parameter, dec: Dict[str, Any]) -> Dict[str, Any]:
+            schema=super().to_schema(param,dec)
+            schema['pattern']= r'<@!?(\d+)>'
+            return schema
+
+        def from_schema(self, value: Any, schema: Dict[str, Any]) -> Any:
+            value=super().from_schema(value,schema)
+            pat=schema.get('pattern',None)
+            if not pat:
+                raise ValueError("No pattern found.")
+            print(pat)
+            extract=re.match(pat,value)[1]
+            return extract
+    add_converter(User,UserConverter)
+    class MyTestLib6(GPTFunctionLibrary):
+        @AILibFunction(name='get_user',description='Get a specific user id')
+        @LibParam(targetuser='The user to retrieve')
+        def get_user(self,targetuser:User):
+            #This is an example of a decorated coroutine command.
+            return f"{targetuser}"
+
+    testlib3=MyTestLib6()
+    schema = testlib3.get_schema()
+    print(schema)
+
+
+    result=testlib3.call_by7_dict({'name':'get_user','arguments':"{\"targetuser\":\"<@1234567890>\"}"})
+    assert result == "1234567890"
+

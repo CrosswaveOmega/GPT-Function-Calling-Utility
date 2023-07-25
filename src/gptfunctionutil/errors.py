@@ -1,5 +1,5 @@
 import json
-
+from .logger import logs
 class GPTLibError(Exception):
     """Base exception class for the GPT Library."""
     pass
@@ -43,11 +43,20 @@ class ConversionError(GPTLibError):
     def __init__(self, message):
         super().__init__(message)
 
-class ConversiontToError(ConversionError):
+class ConversionToError(ConversionError):
+
+    def __init__(self, param_name='', param='', schema={}, msg=''):
+        self.param_name=param_name
+        self.param=''
+        self.dec=schema
+        message=f"{msg} Param:{param_name} of type {param}.\n could not be converted into a schema!"
+        super().__init__(message)
+
+
+class ConversionAddError(ConversionError):
 
     def __init__(self, msg=''):
         super().__init__(msg)
-
 
 
 class ConversionFromError(ConversionError):

@@ -1,3 +1,5 @@
+from .logger import logs
+
 import inspect
 import json
 import re
@@ -8,7 +10,7 @@ from enum import Enum, EnumMeta
 from datetime import datetime
 
 from .errors import *
-from .converter import ConvertStatic
+from .convertutil import ConvertStatic
 
 class CommandSingleton:
     _instance = None
@@ -52,7 +54,7 @@ class LibCommand:
 
         if inspect.iscoroutinefunction(func):
             self.comm_type='coroutine'
-        print(self.function_name,self.comm_type)
+        logs.info("adding %s, comm type is %s",self.function_name,self.comm_type)
         my_schema= {
             'name': self.function_name,
             'description': description,
@@ -80,7 +82,7 @@ class LibCommand:
         if hasattr(func,'parameter_decorators'):
             paramdict=sig.parameters
             param_decorators=func.parameter_decorators
-        print("THE type is",self.comm_type)
+
         self.function_schema.update(
             { 'parameters': {'type': 'object','properties': {},'required': []}}
         )
@@ -133,13 +135,15 @@ class LibCommand:
         '''
         schema=self.function_schema
         parameters=schema['parameters']
-        print('args',function_args)
+        logs.info("converting args for function %s, args:%s", self.function_name,function_args)
+
         for i, v in parameters['properties'].items():
             if i in function_args:
                 converter=self.param_converters[i]
-                print('typehere','converter')
+
                 result=ConvertStatic.schema_validate(i,function_args[i],v,converter)
-                print(i,result)
+
+                logs.info("arg %s converted into %s", i,result)
                 function_args[i]=result
         return function_args
 
@@ -250,7 +254,6 @@ class GPTFunctionLibrary:
 
     def parse_name_args(self, function_dict: Dict[str, Any]) -> Dict[str, Any]:
         '''parse the args within function_dict, and apply any needed corrections to the JSON.'''
-        print(function_dict)
         function_name = function_dict.get('name')
         function_args = function_dict.get('arguments', None)
         if function_name in self.FunctionDict:
@@ -265,7 +268,7 @@ class GPTFunctionLibrary:
                 #This regex is for detecting if there's an expression as a value and not a single integer.
                 #Which has happened before during testing.
                 function_args_str=self.expression_match(function_args_str)
-                print(function_args_str)
+                logs.info('transformed json args for func %s.  result:\n%s',function_name,function_args_str)
                 try:
                     function_args=json.loads(function_args_str, strict=False)
                 except json.JSONDecodeError as e:
@@ -344,7 +347,6 @@ def LibParamSpec(name:str,description:str,**kwargs):
         if not hasattr(func, "parameter_decorators"):
             func.parameter_decorators = {}
         gen=genspec(name,description,**kwargs)
-        print(gen)
         func.parameter_decorators.update(gen)
         return func
     return decorator
@@ -385,7 +387,6 @@ def AILibFunction(name: str, description: str, required:List[str]=[],force_words
         callable, Coroutine, or Command.
     """
     def decorator(func: Union[callable,Coroutine]):
-        print("ADDING CALLABLE",func,name)
         mycommand=LibCommand(func,name,description,required,force_words,enabled)
         func.libcommand=mycommand
 

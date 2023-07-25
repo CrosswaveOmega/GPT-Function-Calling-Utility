@@ -1,14 +1,16 @@
+from .logger import logs
 import inspect
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 from inspect import Parameter
-
+import re
 from datetime import datetime
 
 from .errors import (
     ConversionError,
+    ConversionAddError,
+    ConversionToError,
     ConversionFromError
 )
-
 class Converter():
     """
     To convert parameter signatures into a JSON Schema friendly representaion, and to
@@ -52,15 +54,33 @@ class Converter():
         """
         raise NotImplementedError('Derived classes need to implement this.')
 
-import re
+
 class BooleanConverter(Converter):
+    """
+    This converter is for Boolean values.
+    """
     def to_schema(self, param: inspect.Parameter, dec: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Generate a boolean type schema from a parameter signature.
+
+        Parameters
+        -----------
+        param: :class:`inspect.Parameter`
+            The Parameter signature to convert.  Should have a string type annotation.
+        dec: :class:`Dict[str,Any]`
+            Dictionary of additional attributes to be added to the schema.
+        Returns
+        ------
+            Dict[str,Any]: the schema generated for param
+        Raises
+        -------
+        """
         schema: Dict[str, Any] = {
             "type": "boolean"
         }
         return schema
 
-    def from_schema(self, value: Any, schema: Dict[str, Any]) -> Optional[str]:
+    def from_schema(self, value: Any, schema: Dict[str, Any]) -> bool:
 
         if not isinstance(value, bool):
             raise ValueError("Value is not of type 'bool'.")
@@ -68,7 +88,25 @@ class BooleanConverter(Converter):
         return value
 
 class StringConverter(Converter):
+    '''This converter is for string types, as well as custom types that can be derived from strings,
+        such as datetimes.'''
     def to_schema(self, param: inspect.Parameter, dec: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Generate a schema (for a string type) from a parameter signature and declare additonal keywords.
+
+        Parameters
+        -----------
+        param: :class:`inspect.Parameter`
+            The Parameter signature to convert.  Should have a str annotation.
+        dec: :class:`Dict[str,Any]`
+            Dictionary of additional attributes to be added to the schema.
+            valid keywords include minLength, maxLength, and pattern
+        Returns
+        ------
+            Dict[str,Any]: the schema generated for param.
+        Raises
+        -------
+        """
         schema: Dict[str, Any] = {
             "type": "string"
         }
@@ -85,8 +123,23 @@ class StringConverter(Converter):
 
         return schema
 
-    def from_schema(self, value: Any, schema: Dict[str, Any]) -> Optional[str]:
+    def from_schema(self, value: Any, schema: Dict[str, Any]) -> str:
+        """
+        Validate and return string value.
 
+        Parameters
+        -----------
+        value: :class: `Any`
+            a variable to be validated with the schema Dict
+        schema: :class:`Dict[str,Any]`
+            The schema that value will be validated with follow.
+        Returns
+        --------
+            `str`: value if validation was successfull.
+        Raises
+        -------
+        ValueError- if Validation has failed
+        """
         if not isinstance(value, str):
             raise ValueError("Value is not of type 'str'.")
 
@@ -101,16 +154,48 @@ class StringConverter(Converter):
 
         return value
 class DatetimeConverter(StringConverter):
+    '''This converter is for datetime objects, which are derived from a string.'''
     def to_schema(self, param: inspect.Parameter, dec: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Generate a string type schema, and then apply a 'date-time' format.
+        This will force OpenAI to return a formatted string with the function call
+        which is used to initalize a new datetime.
+
+        Parameters
+        -----------
+        param: :class:`inspect.Parameter`
+            The Parameter signature to convert.  Should have a datetime annotation.
+        dec: :class:`Dict[str,Any]`
+            Dictionary of additional attributes to be added to the schema.
+        Returns
+        ------
+            `Dict[str,Any]`: the schema generated for param.
+        Raises
+        -------
+        """
         schema=super().to_schema(param,dec)
         schema['format']='date-time'
-        print('thisform',schema)
         return schema
 
-    def from_schema(self, value: Any, schema: Dict[str, Any]) -> Any:
+    def from_schema(self, value: str, schema: Dict[str, Any]) -> datetime:
+        """
+        Validate string value and initalize a datetime object.
+
+        Parameters
+        -----------
+        value: :class: `str`
+            a variable to be validated with the schema Dict
+        schema: :class:`Dict[str,Any]`
+            The schema that value will be validated with follow.
+        Returns
+        --------
+            `datetime`: A new datetime derived from value.
+        Raises
+        -------
+        ValueError- if Validation has failed or the format keyword is missing/not set to date-time in schema.
+        """
         value=super().from_schema(value,schema)
         form=schema.get('format',None)
-        print('form',form)
         if not form:
             raise ValueError("No format found.")
         if form=='date-time':
@@ -118,12 +203,31 @@ class DatetimeConverter(StringConverter):
             converted_datetime = datetime.strptime(
                 value, datetime_format
                 )
-            value=converted_datetime
-            return value
+            newvalue=converted_datetime
+            return newvalue
+        else:
+            raise ValueError('Format is not "date-time" ')
 
 class NumericConverter(Converter):
 
+    '''This Converter is for floats and integers'''
     def to_schema(self, param: inspect.Parameter, dec: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Generate a number or integer type schema from a parameter signature and declare additonal keywords.
+
+        Parameters
+        -----------
+        param: :class:`inspect.Parameter`
+            The Parameter signature to convert.  Should have an `int` or `float` annotation.
+        dec: :class:`Dict[str,Any]`
+            Dictionary of additional attributes to be added to the schema.
+
+        Returns
+        ------
+            `Dict[str,Any]`: the schema generated for param.
+        Raises
+        -------
+        """
         schema: Dict[str, Any] = {}
 
         if 'minimum' in dec:
@@ -144,7 +248,23 @@ class NumericConverter(Converter):
 
         return schema
 
-    def from_schema(self, value: Any, schema: Dict[str, Any]) -> Any:
+    def from_schema(self, value: Any, schema: Dict[str, Any]) -> Union[float, int]:
+        """
+        Ensure that value is an integer or float, and validate with schema.
+
+        Parameters
+        -----------
+        value: :class: `Any`
+            a variable to be validated
+        schema: :class:`Dict[str,Any]`
+            The schema that value will be validated with follow.
+        Returns
+        --------
+            `Union[float, int]`: validated float or integer value.
+        Raises
+        -------
+        ValueError- if Validation has failed or the format keyword is missing/not set to date-time in schema.
+        """
         if not isinstance(value, (int, float)):
             raise ValueError("Value is not of type 'int' or 'float'.")
 
@@ -167,14 +287,33 @@ class NumericConverter(Converter):
 
 
 class ArrayConverter(Converter):
+    '''This Converter is for Arrays.  Currenly unstable.'''
     def to_schema(self, param: inspect.Parameter, dec: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Generate an array schema for a List or Tuple.
+
+
+        Parameters
+        -----------
+        param: :class:`inspect.Parameter`
+            The Parameter signature to convert.  Should have a List or Tuple annotation with defined
+            element typing for an integers, floats, string, or boolean
+        dec: :class:`Dict[str,Any]`
+            Dictionary of additional attributes to be added to the schema.
+
+        Returns
+        ------
+            `Dict[str,Any]`: the schema generated for param.
+        Raises
+        -------
+        """
         schema: Dict[str, Any] = {
             "type": "array"
         }
 
-        if param.annotation == list:
+        if param.annotation == List:
             schema['items'] = {}  # Empty schema for list validation
-        elif param.annotation == tuple:
+        elif param.annotation == Tuple:
             prefix_items = []
             for index, item_type in enumerate(param.annotation.__args__):
                 prefix_items.append(self._get_type_schema(item_type))
@@ -193,6 +332,22 @@ class ArrayConverter(Converter):
         return schema
 
     def from_schema(self, value: Any, schema: Dict[str, Any]) -> List:
+        """
+        Validate if value is a valid array based on schema.
+
+        Parameters
+        -----------
+        value: :class: `Any`
+            a variable to be validated.  Should be a list
+        schema: :class:`Dict[str,Any]`
+            The schema that value will be validated with follow.
+        Returns
+        --------
+        List->
+        Raises
+        -------
+        ValueError- if Validation has failed or the format keyword is missing/not set to date-time in schema.
+        """
         if not isinstance(value, list):
             raise ValueError("Value is not of type 'list'.")
 
@@ -221,8 +376,27 @@ class ArrayConverter(Converter):
             return {}  # Empty schema for custom types
 
 class LiteralConverter(Converter):
-    '''turns Literals into enums.'''
+    '''Create enums from literals, eg Literal['a','b,'c'].
+    Currently, only String Literals can be used..'''
     def to_schema(self, param: inspect.Parameter, dec: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Generate an enum schema for a passed in Literal annotated parameter schema.
+
+
+        Parameters
+        -----------
+        param: :class:`inspect.Parameter`
+            The Parameter signature to convert.  Should have a Literal annotation.
+            Currently, only s
+        dec: :class:`Dict[str,Any]`
+            Dictionary of additional attributes to be added to the schema.
+
+        Returns
+        ------
+            `Dict[str,Any]`: the schema generated for param.
+        Raises
+        -------
+        """
         schema: Dict[str, Any] = {}
         literal_values = param.annotation.__args__
         schema['type']='string'
@@ -231,55 +405,22 @@ class LiteralConverter(Converter):
         return schema
 
     def from_schema(self, value: Any, schema: Dict[str, Any]) -> Any:
+        """
+        Validate by ensuring if value is within schema's 'enum' field
+
+        Parameters
+        -----------
+        value: :class: `Any`
+            a variable to be validated.
+        schema: :class:`Dict[str,Any]`
+            The schema that value will be validated with.
+        Returns
+        --------
+            value `str`->value
+        Raises
+        -------
+        ValueError- if Validation has failed or the format keyword is missing/not set to date-time in schema.
+        """
         if value not in schema['enum']:
             raise ValueError(f"Value {value} does not match any of the literal values.")
         return value
-
-to_ignore=['_empty','Context']
-substitutions={
-    'str':StringConverter,
-    'int':NumericConverter,
-    'bool':BooleanConverter,
-    'float':NumericConverter,
-    'datetime':DatetimeConverter,
-    'Literal':LiteralConverter,
-    'List':ArrayConverter
-}
-class ConvertStatic():
-
-    @staticmethod
-    def parameter_into_schema(param_name:str,param:inspect.Parameter,dec:Union[str,Dict[str,any]]):
-        decs=dec
-        if isinstance(dec,str):
-            decs={'description':dec}
-        if isinstance(param.annotation, str):
-            typename = param.annotation  # Treat the string annotation as a regular string
-        else:
-            typename = param.annotation.__name__  # Access the __name__ attribute of the type object
-
-
-        oldtypename=typename
-        if typename in substitutions:
-            typename=substitutions[typename]
-        else: return None, None
-        param_info = {}
-        if decs.get('description', ''):
-            param_info['description']=decs.get('description', '')
-        mod=typename().to_schema(param,decs)
-        param_info.update(mod)
-        print('typename',typename)
-        return param_info, typename
-
-
-    @staticmethod
-    def schema_validate(param_name:str,value:any,schema:Union[str,Dict[str,any]],converter:Converter):
-        typename=None
-        if converter!=None:
-            typename=converter
-        else:
-            raise ConversionFromError(param_name,value,schema,msg='No converter found.')
-        try:
-            mod=typename().from_schema(value,schema)
-        except Exception as e:
-            raise ConversionFromError(param_name,value,schema,str(e)) from e
-        return mod

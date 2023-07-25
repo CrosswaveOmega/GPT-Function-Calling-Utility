@@ -1,3 +1,4 @@
+from .logger import logs
 import inspect
 import json
 import re
@@ -14,7 +15,7 @@ from discord.ext.commands import (
     CheckFailure
 )
 from .functionlib import GPTFunctionLibrary, LibCommand, genspec
-from .converter import ConvertStatic
+from .convertutil import ConvertStatic
 from .errors import *
 class CommandSingleton:
     _instance = None
@@ -66,7 +67,7 @@ class LibCommandDisc(LibCommand):
             self.function_name=func.qualified_name
             self.comm_type='command'
 
-            print(self.function_name,self.comm_type)
+            logs.info("adding %s, comm type is %s",self.function_name,self.comm_type)
             my_schema= {
                 'name': self.function_name,
                 'description': description,
@@ -99,7 +100,7 @@ class LibCommandDisc(LibCommand):
             if hasattr(func,'parameter_decorators'):
                 paramdict=sig.parameters
                 param_decorators=func.parameter_decorators
-        #print("THE type is",self.comm_type)
+
         self.function_schema.update(
             { 'parameters': {'type': 'object','properties': {},'required': []}}
         )
@@ -199,7 +200,8 @@ class GPTFunctionLibraryDisc(GPTFunctionLibrary):
         """
         for command in bot.walk_commands():
             if "libcommand" in command.extras:
-                print(command.qualified_name, command.extras["libcommand"])
+                logs.info("from command s%, adding %s",command.qualified_name,command.extras["libcommand"])
+
                 function_name = command.qualified_name
                 self.FunctionDict[function_name] = command.extras["libcommand"]
 
@@ -228,7 +230,7 @@ class GPTFunctionLibraryDisc(GPTFunctionLibrary):
 
             result=str(e)
             return result
-        print(function_name, function_args,len(function_args))
+        logs.info('calling function %s with args %s',function_name, function_args)
         libmethod = self.FunctionDict.get(function_name)
         if libmethod.comm_type=='command':
             return await libmethod.invoke_command(ctx, function_args)
@@ -265,7 +267,6 @@ def LibParamSpec(name:str,description:Optional[str]=None,**kwargs):
         if not hasattr(func, "parameter_decorators"):
             func.parameter_decorators = {}
         gen=genspec(name,description,**kwargs)
-        print(gen)
         func.parameter_decorators.update(gen)
         return func
     return decorator
@@ -313,7 +314,6 @@ def AILibFunction(name: str, description: str, required:List[str]=[],force_words
             func.extras['libcommand']=mycommand
             return func
         else:
-            print("ADDING CALLABLE",func,name)
             mycommand=LibCommandDisc(func,name,description,required,force_words,enabled)
             func.libcommand=mycommand
 
