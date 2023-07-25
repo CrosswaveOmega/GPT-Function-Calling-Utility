@@ -189,11 +189,20 @@ async def test_numeric_converter_from_schema_not_multiple_of():
 @pytest.mark.asyncio
 async def test_array_converter_to_schema():
     converter = ArrayConverter()
-    param = inspect.Parameter('param', Parameter.POSITIONAL_OR_KEYWORD, annotation=list)
+    param = inspect.Parameter('param', Parameter.POSITIONAL_OR_KEYWORD, annotation=List[str])
     dec = {'minItems': 1, 'maxItems': 5, 'uniqueItems': True}
-    expected_schema = {'type': 'array', 'items': {}, 'minItems': 1, 'maxItems': 5, 'uniqueItems': True}
-    assert converter.to_schema(param, dec) == expected_schema
+    expected_schema = {'type': 'array', 'items': {"type":'string'}, 'minItems': 1, 'maxItems': 5, 'uniqueItems': True}
+    schema=converter.to_schema(param, dec)
+    print(schema)
+    assert schema== expected_schema
 
+@pytest.mark.asyncio
+async def test_array_converter_from_schema_with_invalid_value():
+    converter = ArrayConverter()
+    value = 'test'
+    schema = {'type': 'array'}
+    with pytest.raises(ValueError):
+        converter.from_schema(value, schema)
 
 @pytest.mark.asyncio
 async def test_check_converter():

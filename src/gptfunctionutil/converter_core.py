@@ -310,14 +310,18 @@ class ArrayConverter(Converter):
         schema: Dict[str, Any] = {
             "type": "array"
         }
+        if param.annotation == list or getattr(param.annotation, "__origin__", None) == list:
+            # Check if the annotation is 'list' or an instance of the 'List' type hint from typing module
+            schema['items']={}
+            element_type = getattr(param.annotation, "__args__", [Any])[0]
+            schema['items']= self._get_type_schema(element_type)
 
-        if param.annotation == List:
-            schema['items'] = {}  # Empty schema for list validation
-        elif param.annotation == Tuple:
+        elif param.annotation == Tuple or getattr(param.annotation, "__origin__", None) == Tuple:
             prefix_items = []
-            for index, item_type in enumerate(param.annotation.__args__):
+            for item_type in getattr(param.annotation, "__args__", [Any]):
                 prefix_items.append(self._get_type_schema(item_type))
             schema['prefixItems'] = prefix_items
+
 
         # Length constraints
         if 'minItems' in dec:
