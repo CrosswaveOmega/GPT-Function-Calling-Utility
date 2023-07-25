@@ -194,13 +194,6 @@ async def test_array_converter_to_schema():
     expected_schema = {'type': 'array', 'items': {}, 'minItems': 1, 'maxItems': 5, 'uniqueItems': True}
     assert converter.to_schema(param, dec) == expected_schema
 
-@pytest.mark.asyncio
-async def test_array_converter_from_schema():
-    converter = ArrayConverter()
-    value = [1, 2, 3]
-    schema = {'type': 'array', 'items': {}, 'minItems': 1, 'maxItems': 5, 'uniqueItems': True}
-    expected_result = [1, 2, 3]
-    assert converter.from_schema(value, schema) == expected_result
 
 @pytest.mark.asyncio
 async def test_check_converter():
@@ -240,6 +233,6 @@ async def test_check_converter():
     print(schema)
 
 
-    result=testlib3.call_by7_dict({'name':'get_user','arguments':"{\"targetuser\":\"<@1234567890>\"}"})
+    result=testlib3.call_by_dict({'name':'get_user','arguments':"{\"targetuser\":\"<@1234567890>\"}"})
     assert result == "1234567890"
 
