@@ -321,6 +321,43 @@ class GPTFunctionLibrary:
             return libmethod.command(self)
         else:
             raise AttributeError(f"Method '{function_name}' not found or not callable.")
+    async def call_by_dict_async(self,function_dict: Dict[str, Any]):
+        """
+        Call an function based on the provided dictionary.
+        This function works with coroutines.
+
+        Args:
+            function_dict (Dict[str, Any]): The dictionary containing the function name and arguments.
+
+        Returns:
+            The result of the function call.
+
+        Raises:
+            AttributeError: If the function name is not found or not callable.
+        """
+        try:
+            function_name,function_args=self.parse_name_args(function_dict)
+        except GPTLibError as e:
+            if isinstance(e, FunctionNotFound):
+                '''Invoke a default function so something is returned...'''
+                return self.default_callback(e.function_name,e.arguments)
+
+            result=str(e)
+            return result
+        libmethod = self.FunctionDict.get(function_name)
+
+        if libmethod.comm_type=='coroutine':
+            if len(function_args)>0:
+                return await libmethod.command(self,**function_args)
+            return await libmethod.command(self)
+
+        elif libmethod.comm_type=='callable':
+            function_args=libmethod.convert_args(function_args)
+            if len(function_args)>0:
+                return libmethod.command(self, **function_args)
+            return libmethod.command(self)
+        else:
+            raise AttributeError(f"Method '{function_name}' not found or not callable.")
 
 def genspec(name:str,description:str,**kwargs):
     spec={}
