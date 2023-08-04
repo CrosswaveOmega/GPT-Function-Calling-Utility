@@ -67,7 +67,7 @@ class LibCommandDisc(LibCommand):
             self.function_name=func.qualified_name
             self.comm_type='command'
 
-            logs.info("adding %s, comm type is %s",self.function_name,self.comm_type)
+            logs.info("initalizing %s, comm type is %s",self.function_name,self.comm_type)
             my_schema= {
                 'name': self.function_name,
                 'description': description,
@@ -200,10 +200,11 @@ class GPTFunctionLibraryDisc(GPTFunctionLibrary):
         """
         for command in bot.walk_commands():
             if "libcommand" in command.extras:
-                logs.info("from command s%, adding %s",command.qualified_name,command.extras["libcommand"])
+                libcommand=command.extras["libcommand"]
+                logs.info("adding %s: '%s' into %s function_dictionary",libcommand.comm_type,command.qualified_name,self.__class__.__name__)
 
                 function_name = command.qualified_name
-                self.FunctionDict[function_name] = command.extras["libcommand"]
+                self.FunctionDict[function_name] = libcommand
 
 
     async def call_by_dict_ctx(self, ctx:Context, function_dict: Dict[str, Any]) -> Coroutine:
@@ -230,9 +231,11 @@ class GPTFunctionLibraryDisc(GPTFunctionLibrary):
 
             result=str(e)
             return result
-        logs.info('calling function %s with args %s',function_name, function_args)
+
         libmethod = self.FunctionDict.get(function_name)
+        logs.info('invoking %s `%s` with args %s',libmethod.comm_type, function_name, function_args)
         if libmethod.comm_type=='command':
+
             return await libmethod.invoke_command(ctx, function_args)
 
         else:

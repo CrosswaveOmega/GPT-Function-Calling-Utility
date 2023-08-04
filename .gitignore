@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 pytest.local.ini
+secret.ini
 # C extensions
 *.so
 

@@ -49,19 +49,20 @@ def add_converter(fortype: Type, converterclass: Type[Converter]) -> None:
         raise ConversionAddError(f'{typename} already in dictionary!')
 class ConvertStatic():
     '''static class for to_schema and from_schema logic.'''
+
     @staticmethod
     def parameter_into_schema(param_name:str,param:inspect.Parameter,dec:Union[str,Dict[str,any]])->Tuple[Dict[str, any], Type[Converter]]:
         """
         Generate a schema for the Converts a parameter signature into a schema.
 
         Parameters:
-        param_name (str): The name of the parameter.
-        param (inspect.Parameter): The parameter signature to convert .
-        dec (Union[str, Dict[str, any]]): Additional keywords to be added to the schema,
-        including definition
+            param_name (str): The name of the parameter.
+            param (inspect.Parameter): The parameter signature to convert .
+            dec (Union[str, Dict[str, any]]): Additional keywords to be added to the schema,
+            including definition
 
         Returns:
-        Tuple[Dict[str, any], Type[Converter]]: The schema generated along with the Converter Class.
+            Tuple[Dict[str, any], Type[Converter]]: The schema generated along with the Converter Class.
 
         Raises:
         ConversionToError: If conversion to schema fails.
@@ -96,7 +97,7 @@ class ConvertStatic():
     @staticmethod
     def schema_validate(param_name:str,value:any,schema:Union[str,Dict[str,any]],converter:Converter)->Any:
         """
-        Validate and apply needed a value based on schema.
+        Validate and apply any needed conversions to value based on schema.
 
         Parameters:
         param_name (str): The name of the parameter.

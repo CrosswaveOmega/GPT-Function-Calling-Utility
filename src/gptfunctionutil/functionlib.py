@@ -33,15 +33,16 @@ class CommandSingleton:
 
 
 class LibCommand:
-    '''This class is a container for functions.
-    that have been annotated with the LibParam and the AILibFunction decorators,
+    '''This class is a container for functions that have been annotated with the
+     LibParam and the AILibFunction decorators,
     wrapping them up with attributes that help the GPTFunctionLibary invoke them.'''
     def __init__(self, func: Union[callable,Coroutine], name: str, description: str, required:List[str]=[],force_words:List[str]=[], enabled=True):
         '''
-        Description: This class represents a library command. It encapsulates a Discord bot command, along with its associated metadata and functionality.
+        This class represents a library command. It encapsulates a callable method/coroutine,
+        along with its associated metadata and functionality.
 
         Args:
-            func (Command): The Discord.py bot command object. (commands.command())
+            func (Union[callable,Coroutine]): The callable method or coroutine to be wrapped.
             name (str): The name of the command.
             description (str): The description of the command.
             required (List[str], optional): A list of required parameter names. Defaults to an empty list.
@@ -54,7 +55,7 @@ class LibCommand:
 
         if inspect.iscoroutinefunction(func):
             self.comm_type='coroutine'
-        logs.info("adding %s, comm type is %s",self.function_name,self.comm_type)
+        logs.info("initalizing %s, comm type is %s",self.function_name,self.comm_type)
         my_schema= {
             'name': self.function_name,
             'description': description,
@@ -71,8 +72,9 @@ class LibCommand:
         self.force_words=force_words
     def param_iterate(self):
         '''
-        Iterates over the command's arguments and update the function_schema dictionary with parameter information.
-        Every parameter that isn't 'self' or ctx must be added!
+        Iterates over the command's arguments and update the function_schema
+        dictionary with parameter information.
+        Every parameter that is not decorated with a valid type will not be added!
         '''
         func=self.command
         paramdict={}
@@ -209,6 +211,7 @@ class GPTFunctionLibrary:
         for name, method in self.__class__.__dict__.items():
             if hasattr(method, "libcommand"):
                 function_name = method.libcommand.function_name or method.__name__
+                logs.info("adding %s: '%s' into %s function_dictionary",method.libcommand.comm_type,function_name,self.__class__.__name__)
                 self.FunctionDict[function_name] = method.libcommand
 
     def force_word_check(self,query:str):

@@ -1,6 +1,7 @@
 import logging
-
-# Define the logs
+'''
+a simple logger.
+'''
 logs = logging.getLogger('gptfunctionutil')
 logs.setLevel(logging.DEBUG)
 
