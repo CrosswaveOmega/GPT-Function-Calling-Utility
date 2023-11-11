@@ -5,19 +5,16 @@ from inspect import Parameter
 import re
 from datetime import datetime
 
-from .errors import (
-    ConversionError,
-    ConversionAddError,
-    ConversionToError,
-    ConversionFromError
-)
-class Converter():
+from .errors import ConversionError, ConversionAddError, ConversionToError, ConversionFromError
+
+
+class Converter:
     """
     To convert parameter signatures into a JSON Schema friendly representaion, and to
     convert/verify in return.
     """
 
-    def to_schema(self, param:inspect.Parameter,dec:Dict[str,Any])->Dict[str,Any]:
+    def to_schema(self, param: inspect.Parameter, dec: Dict[str, Any]) -> Dict[str, Any]:
         """
         Generate a schema from a parameter signature.
 
@@ -33,8 +30,9 @@ class Converter():
         Raises
         -------
         """
-        raise NotImplementedError('Derived classes need to implement this.')
-    def from_schema(self,value:Any,schema:Dict[str,Any])->Any:
+        raise NotImplementedError("Derived classes need to implement this.")
+
+    def from_schema(self, value: Any, schema: Dict[str, Any]) -> Any:
         """
         Convert value into the correct type using the schema Dictionary as a reference.
         More important for more complex objects.
@@ -52,13 +50,14 @@ class Converter():
         Raises
         -------
         """
-        raise NotImplementedError('Derived classes need to implement this.')
+        raise NotImplementedError("Derived classes need to implement this.")
 
 
 class BooleanConverter(Converter):
     """
     This converter is for Boolean values.
     """
+
     def to_schema(self, param: inspect.Parameter, dec: Dict[str, Any]) -> Dict[str, Any]:
         """
         Generate a boolean type schema from a parameter signature.
@@ -75,21 +74,20 @@ class BooleanConverter(Converter):
         Raises
         -------
         """
-        schema: Dict[str, Any] = {
-            "type": "boolean"
-        }
+        schema: Dict[str, Any] = {"type": "boolean"}
         return schema
 
     def from_schema(self, value: Any, schema: Dict[str, Any]) -> bool:
-
         if not isinstance(value, bool):
             raise ValueError("Value is not of type 'bool'.")
 
         return value
 
+
 class StringConverter(Converter):
-    '''This converter is for string types, as well as custom types that can be derived from strings,
-        such as datetimes.'''
+    """This converter is for string types, as well as custom types that can be derived from strings,
+    such as datetimes."""
+
     def to_schema(self, param: inspect.Parameter, dec: Dict[str, Any]) -> Dict[str, Any]:
         """
         Generate a schema (for a string type) from a parameter signature and declare additonal keywords.
@@ -107,19 +105,17 @@ class StringConverter(Converter):
         Raises
         -------
         """
-        schema: Dict[str, Any] = {
-            "type": "string"
-        }
+        schema: Dict[str, Any] = {"type": "string"}
 
         # Check for length constraints
-        if 'minLength' in dec or param.default is None:
-            schema['minLength'] = dec.get('minLength', 0)
-        if 'maxLength' in dec or param.default is None:
-            schema['maxLength'] = dec.get('maxLength', 255)
+        if "minLength" in dec or param.default is None:
+            schema["minLength"] = dec.get("minLength", 0)
+        if "maxLength" in dec or param.default is None:
+            schema["maxLength"] = dec.get("maxLength", 255)
 
         # Check for pattern constraint
-        if 'pattern' in dec:
-            schema['pattern'] = dec['pattern']
+        if "pattern" in dec:
+            schema["pattern"] = dec["pattern"]
 
         return schema
 
@@ -143,18 +139,21 @@ class StringConverter(Converter):
         if not isinstance(value, str):
             raise ValueError("Value is not of type 'str'.")
 
-        if 'minLength' in schema and len(value) < schema['minLength']:
+        if "minLength" in schema and len(value) < schema["minLength"]:
             raise ValueError("Value does not meet the minLength constraint.")
 
-        if 'maxLength' in schema and len(value) > schema['maxLength']:
+        if "maxLength" in schema and len(value) > schema["maxLength"]:
             raise ValueError("Value exceeds the maxLength constraint.")
 
-        if 'pattern' in schema and not re.match(schema['pattern'], value):
+        if "pattern" in schema and not re.match(schema["pattern"], value):
             raise ValueError("Value does not match the specified pattern.")
 
         return value
+
+
 class DatetimeConverter(StringConverter):
-    '''This converter is for datetime objects, which are derived from a string.'''
+    """This converter is for datetime objects, which are derived from a string."""
+
     def to_schema(self, param: inspect.Parameter, dec: Dict[str, Any]) -> Dict[str, Any]:
         """
         Generate a string type schema, and then apply a 'date-time' format.
@@ -173,8 +172,8 @@ class DatetimeConverter(StringConverter):
         Raises
         -------
         """
-        schema=super().to_schema(param,dec)
-        schema['format']='date-time'
+        schema = super().to_schema(param, dec)
+        schema["format"] = "date-time"
         return schema
 
     def from_schema(self, value: str, schema: Dict[str, Any]) -> datetime:
@@ -194,23 +193,23 @@ class DatetimeConverter(StringConverter):
         -------
         ValueError- if Validation has failed or the format keyword is missing/not set to date-time in schema.
         """
-        value=super().from_schema(value,schema)
-        form=schema.get('format',None)
+        value = super().from_schema(value, schema)
+        form = schema.get("format", None)
         if not form:
             raise ValueError("No format found.")
-        if form=='date-time':
+        if form == "date-time":
             datetime_format = "%Y-%m-%dT%H:%M:%S%z"
-            converted_datetime = datetime.strptime(
-                value, datetime_format
-                )
-            newvalue=converted_datetime
+            converted_datetime = datetime.strptime(value, datetime_format)
+            newvalue = converted_datetime
             return newvalue
         else:
             raise ValueError('Format is not "date-time" ')
 
+
 class NumericConverter(Converter):
 
-    '''This Converter is for floats and integers'''
+    """This Converter is for floats and integers"""
+
     def to_schema(self, param: inspect.Parameter, dec: Dict[str, Any]) -> Dict[str, Any]:
         """
         Generate a number or integer type schema from a parameter signature and declare additonal keywords.
@@ -230,21 +229,21 @@ class NumericConverter(Converter):
         """
         schema: Dict[str, Any] = {}
 
-        if 'minimum' in dec:
-            schema['minimum'] = dec['minimum']
-        if 'maximum' in dec:
-            schema['maximum'] = dec['maximum']
-        if 'exclusiveMinimum' in dec:
-            schema['exclusiveMinimum'] = dec['exclusiveMinimum']
-        if 'exclusiveMaximum' in dec:
-            schema['exclusiveMaximum'] = dec['exclusiveMaximum']
-        if 'multipleOf' in dec:
-            schema['multipleOf'] = dec['multipleOf']
+        if "minimum" in dec:
+            schema["minimum"] = dec["minimum"]
+        if "maximum" in dec:
+            schema["maximum"] = dec["maximum"]
+        if "exclusiveMinimum" in dec:
+            schema["exclusiveMinimum"] = dec["exclusiveMinimum"]
+        if "exclusiveMaximum" in dec:
+            schema["exclusiveMaximum"] = dec["exclusiveMaximum"]
+        if "multipleOf" in dec:
+            schema["multipleOf"] = dec["multipleOf"]
 
         if param.annotation == int:
-            schema['type'] = 'integer'
+            schema["type"] = "integer"
         else:
-            schema['type'] = 'number'
+            schema["type"] = "number"
 
         return schema
 
@@ -268,26 +267,27 @@ class NumericConverter(Converter):
         if not isinstance(value, (int, float)):
             raise ValueError("Value is not of type 'int' or 'float'.")
 
-        if 'minimum' in schema and value < schema['minimum']:
+        if "minimum" in schema and value < schema["minimum"]:
             raise ValueError("Value is below the minimum constraint.")
 
-        if 'maximum' in schema and value > schema['maximum']:
+        if "maximum" in schema and value > schema["maximum"]:
             raise ValueError("Value exceeds the maximum constraint.")
 
-        if 'exclusiveMinimum' in schema and value <= schema['exclusiveMinimum']:
+        if "exclusiveMinimum" in schema and value <= schema["exclusiveMinimum"]:
             raise ValueError("Value does not meet the exclusiveMinimum constraint.")
 
-        if 'exclusiveMaximum' in schema and value >= schema['exclusiveMaximum']:
+        if "exclusiveMaximum" in schema and value >= schema["exclusiveMaximum"]:
             raise ValueError("Value does not meet the exclusiveMaximum constraint.")
 
-        if 'multipleOf' in schema and value % schema['multipleOf'] != 0:
+        if "multipleOf" in schema and value % schema["multipleOf"] != 0:
             raise ValueError("Value does not meet the multipleOf constraint.")
 
         return value
 
 
 class ArrayConverter(Converter):
-    '''This Converter is for Arrays.  Currenly unstable.'''
+    """This Converter is for Arrays.  Currenly unstable."""
+
     def to_schema(self, param: inspect.Parameter, dec: Dict[str, Any]) -> Dict[str, Any]:
         """
         Generate an array schema for a List or Tuple.
@@ -307,31 +307,28 @@ class ArrayConverter(Converter):
         Raises
         -------
         """
-        schema: Dict[str, Any] = {
-            "type": "array"
-        }
+        schema: Dict[str, Any] = {"type": "array"}
         if param.annotation == list or getattr(param.annotation, "__origin__", None) == list:
             # Check if the annotation is 'list' or an instance of the 'List' type hint from typing module
-            schema['items']={}
+            schema["items"] = {}
             element_type = getattr(param.annotation, "__args__", [Any])[0]
-            schema['items']= self._get_type_schema(element_type)
+            schema["items"] = self._get_type_schema(element_type)
 
         elif param.annotation == Tuple or getattr(param.annotation, "__origin__", None) == Tuple:
             prefix_items = []
             for item_type in getattr(param.annotation, "__args__", [Any]):
                 prefix_items.append(self._get_type_schema(item_type))
-            schema['prefixItems'] = prefix_items
-
+            schema["prefixItems"] = prefix_items
 
         # Length constraints
-        if 'minItems' in dec:
-            schema['minItems'] = dec['minItems']
-        if 'maxItems' in dec:
-            schema['maxItems'] = dec['maxItems']
+        if "minItems" in dec:
+            schema["minItems"] = dec["minItems"]
+        if "maxItems" in dec:
+            schema["maxItems"] = dec["maxItems"]
 
         # Uniqueness constraint
-        if 'uniqueItems' in dec:
-            schema['uniqueItems'] = dec['uniqueItems']
+        if "uniqueItems" in dec:
+            schema["uniqueItems"] = dec["uniqueItems"]
 
         return schema
 
@@ -355,13 +352,13 @@ class ArrayConverter(Converter):
         if not isinstance(value, list):
             raise ValueError("Value is not of type 'list'.")
 
-        if 'minItems' in schema and len(value) < schema['minItems']:
+        if "minItems" in schema and len(value) < schema["minItems"]:
             raise ValueError("Value does not meet the minItems constraint.")
 
-        if 'maxItems' in schema and len(value) > schema['maxItems']:
+        if "maxItems" in schema and len(value) > schema["maxItems"]:
             raise ValueError("Value exceeds the maxItems constraint.")
 
-        if 'uniqueItems' in schema and schema['uniqueItems'] is True:
+        if "uniqueItems" in schema and schema["uniqueItems"] is True:
             if len(set(value)) != len(value):
                 raise ValueError("Value does not meet the uniqueItems constraint.")
 
@@ -379,9 +376,11 @@ class ArrayConverter(Converter):
         else:
             return {}  # Empty schema for custom types
 
+
 class LiteralConverter(Converter):
-    '''Create enums from literals, eg Literal['a','b,'c'].
-    Currently, only String Literals can be used..'''
+    """Create enums from literals, eg Literal['a','b,'c'].
+    Currently, only String Literals can be used.."""
+
     def to_schema(self, param: inspect.Parameter, dec: Dict[str, Any]) -> Dict[str, Any]:
         """
         Generate an enum schema for a passed in Literal annotated parameter schema.
@@ -403,8 +402,8 @@ class LiteralConverter(Converter):
         """
         schema: Dict[str, Any] = {}
         literal_values = param.annotation.__args__
-        schema['type']='string'
-        schema['enum'] = literal_values
+        schema["type"] = "string"
+        schema["enum"] = literal_values
         schema.update(dec)
         return schema
 
@@ -425,6 +424,6 @@ class LiteralConverter(Converter):
         -------
         ValueError- if Validation has failed or the format keyword is missing/not set to date-time in schema.
         """
-        if value not in schema['enum']:
+        if value not in schema["enum"]:
             raise ValueError(f"Value {value} does not match any of the literal values.")
         return value

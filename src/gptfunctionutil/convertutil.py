@@ -6,26 +6,23 @@ import re
 from datetime import datetime
 from typing import Type, TypeVar
 
-from .errors import (
-    ConversionError,
-    ConversionAddError,
-    ConversionToError,
-    ConversionFromError
-)
+from .errors import ConversionError, ConversionAddError, ConversionToError, ConversionFromError
 from .converter_core import *
 
-to_ignore=['_empty','Context']
-substitutions={
-    'str':StringConverter,
-    'int':NumericConverter,
-    'bool':BooleanConverter,
-    'float':NumericConverter,
-    'datetime':DatetimeConverter,
-    'Literal':LiteralConverter,
-    'List':ArrayConverter
+to_ignore = ["_empty", "Context"]
+substitutions = {
+    "str": StringConverter,
+    "int": NumericConverter,
+    "bool": BooleanConverter,
+    "float": NumericConverter,
+    "datetime": DatetimeConverter,
+    "Literal": LiteralConverter,
+    "List": ArrayConverter,
 }
+
+
 def add_converter(fortype: Type, converterclass: Type[Converter]) -> None:
-    '''
+    """
     Add a new converter that will generate schema for Objects of Class fortype, and
     initalize new instances of fortype on validation.
 
@@ -39,19 +36,23 @@ def add_converter(fortype: Type, converterclass: Type[Converter]) -> None:
 
     Returns:
         None
-    '''
+    """
     typename = fortype.__name__  # Access the name attribute of the type object
 
     if typename not in substitutions:
         substitutions[typename] = converterclass
-        logs.info(f"Adding converterclass %s for type %s",typename,converterclass)
+        logs.info(f"Adding converterclass %s for type %s", typename, converterclass)
     else:
-        raise ConversionAddError(f'{typename} already in dictionary!')
-class ConvertStatic():
-    '''static class for to_schema and from_schema logic.'''
+        raise ConversionAddError(f"{typename} already in dictionary!")
+
+
+class ConvertStatic:
+    """static class for to_schema and from_schema logic."""
 
     @staticmethod
-    def parameter_into_schema(param_name:str,param:inspect.Parameter,dec:Union[str,Dict[str,any]])->Tuple[Dict[str, any], Type[Converter]]:
+    def parameter_into_schema(
+        param_name: str, param: inspect.Parameter, dec: Union[str, Dict[str, any]]
+    ) -> Tuple[Dict[str, any], Type[Converter]]:
         """
         Generate a schema for the Converts a parameter signature into a schema.
 
@@ -67,35 +68,33 @@ class ConvertStatic():
         Raises:
         ConversionToError: If conversion to schema fails.
         """
-        decs=dec
-        if isinstance(dec,str):
-            decs={'description':dec}
+        decs = dec
+        if isinstance(dec, str):
+            decs = {"description": dec}
         if isinstance(param.annotation, str):
             typename = param.annotation  # Treat the string annotation as a regular string
         else:
             typename = param.annotation.__name__  # Access the __name__ attribute of the type object
 
-
-        oldtypename=typename
-        converter=None
+        oldtypename = typename
+        converter = None
         if typename in substitutions:
-            converter=substitutions[typename]
+            converter = substitutions[typename]
         else:
-            logs.info(f"type %s was not found!",typename)
+            logs.info(f"type %s was not found!", typename)
             return None, None
         param_info = {}
-        if decs.get('description', ''):
-            param_info['description']=decs.get('description', '')
-        mod=converter().to_schema(param,decs)
-        if mod==None:
-            raise ConversionToError(param_name,param,dec)
+        if decs.get("description", ""):
+            param_info["description"] = decs.get("description", "")
+        mod = converter().to_schema(param, decs)
+        if mod == None:
+            raise ConversionToError(param_name, param, dec)
         param_info.update(mod)
-        logs.info(f"schema generated for param %s with type %s!",param_name,typename)
+        logs.info(f"schema generated for param %s with type %s!", param_name, typename)
         return param_info, converter
 
-
     @staticmethod
-    def schema_validate(param_name:str,value:any,schema:Union[str,Dict[str,any]],converter:Converter)->Any:
+    def schema_validate(param_name: str, value: any, schema: Union[str, Dict[str, any]], converter: Converter) -> Any:
         """
         Validate and apply any needed conversions to value based on schema.
 
@@ -112,19 +111,19 @@ class ConvertStatic():
         ConversionFromError: If conversion from schema fails.
         """
         ...
-        typename=None
-        if converter!=None:
-            typename=converter
+        typename = None
+        if converter != None:
+            typename = converter
         else:
-            error=ConversionFromError(param_name,value,schema,msg='No converter found.')
-            logs.error(error, exc_info=1,stack_info=True)
+            error = ConversionFromError(param_name, value, schema, msg="No converter found.")
+            logs.error(error, exc_info=1, stack_info=True)
             raise error
         try:
-            mod=typename().from_schema(value,schema)
+            mod = typename().from_schema(value, schema)
         except Exception as e:
             try:
-                raise ConversionFromError(param_name,value,schema,str(e)) from e
+                raise ConversionFromError(param_name, value, schema, str(e)) from e
             except Exception as e:
-                logs.error(e, exc_info=1,stack_info=True)
+                logs.error(e, exc_info=1, stack_info=True)
                 raise e
         return mod
