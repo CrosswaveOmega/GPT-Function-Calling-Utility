@@ -12,6 +12,7 @@ from datetime import datetime
 from .errors import *
 from .convertutil import ConvertStatic
 
+
 class CommandSingleton:
     _instance = None
     _commands = {}
@@ -31,13 +32,21 @@ class CommandSingleton:
         return CommandSingleton._commands.get(name, None)
 
 
-
 class LibCommand:
-    '''This class is a container for functions that have been annotated with the
+    """This class is a container for functions that have been annotated with the
      LibParam and the AILibFunction decorators,
-    wrapping them up with attributes that help the GPTFunctionLibary invoke them.'''
-    def __init__(self, func: Union[callable,Coroutine], name: str, description: str, required:List[str]=[],force_words:List[str]=[], enabled=True):
-        '''
+    wrapping them up with attributes that help the GPTFunctionLibary invoke them."""
+
+    def __init__(
+        self,
+        func: Union[callable, Coroutine],
+        name: str,
+        description: str,
+        required: List[str] = [],
+        force_words: List[str] = [],
+        enabled=True,
+    ):
+        """
         This class represents a library command. It encapsulates a callable method/coroutine,
         along with its associated metadata and functionality.
 
@@ -48,56 +57,55 @@ class LibCommand:
             required (List[str], optional): A list of required parameter names. Defaults to an empty list.
             force_words (List[str], optional): A list of force words. Defaults to an empty list.
             enabled (bool, optional): Indicates whether the command is enabled. Defaults to True.
-        '''
-        self.command=func
-        self.internal_name=self.function_name=name
-        self.comm_type='callable'
+        """
+        self.command = func
+        self.internal_name = self.function_name = name
+        self.comm_type = "callable"
 
         if inspect.iscoroutinefunction(func):
-            self.comm_type='coroutine'
-        logs.info("initalizing %s, comm type is %s",self.function_name,self.comm_type)
-        my_schema= {
-            'name': self.function_name,
-            'description': description,
-            'parameters':{'type': 'object','properties': {},'required': []}
+            self.comm_type = "coroutine"
+        logs.info("initalizing %s, comm type is %s", self.function_name, self.comm_type)
+        my_schema = {
+            "name": self.function_name,
+            "description": description,
+            "parameters": {"type": "object", "properties": {}, "required": []},
         }
 
-        self.function_schema=my_schema
-        self.required=required
-        #if 'parameter_decorators' in func.extras:
-        self.param_converters={}
+        self.function_schema = my_schema
+        self.required = required
+        # if 'parameter_decorators' in func.extras:
+        self.param_converters = {}
         self.param_iterate()
 
-        self.enabled=enabled
-        self.force_words=force_words
+        self.enabled = enabled
+        self.force_words = force_words
+
     def param_iterate(self):
-        '''
+        """
         Iterates over the command's arguments and update the function_schema
         dictionary with parameter information.
         Every parameter that is not decorated with a valid type will not be added!
-        '''
-        func=self.command
-        paramdict={}
-        param_decorators={}
+        """
+        func = self.command
+        paramdict = {}
+        param_decorators = {}
 
         sig = inspect.signature(func)
-        if hasattr(func,'parameter_decorators'):
-            paramdict=sig.parameters
-            param_decorators=func.parameter_decorators
+        if hasattr(func, "parameter_decorators"):
+            paramdict = sig.parameters
+            param_decorators = func.parameter_decorators
 
-        self.function_schema.update(
-            { 'parameters': {'type': 'object','properties': {},'required': []}}
-        )
+        self.function_schema.update({"parameters": {"type": "object", "properties": {}, "required": []}})
         for param_name, param in paramdict.items():
-            decs=param_decorators.get(param_name, '')
+            decs = param_decorators.get(param_name, "")
 
-            param_info, converter=ConvertStatic.parameter_into_schema(param_name,param,dec=decs)
+            param_info, converter = ConvertStatic.parameter_into_schema(param_name, param, dec=decs)
 
             if param_info is not None:
-                self.param_converters[param_name]=converter
-                self.function_schema['parameters']['properties'][param_name] = param_info
+                self.param_converters[param_name] = converter
+                self.function_schema["parameters"]["properties"][param_name] = param_info
                 if param.default == inspect.Parameter.empty or param_name in self.required:
-                    self.function_schema['parameters']['required'].append(param_name)
+                    self.function_schema["parameters"]["required"].append(param_name)
 
             # if isinstance(param.annotation, str):
             #     typename = param.annotation  # Treat the string annotation as a regular string
@@ -124,8 +132,8 @@ class LibCommand:
             # if param.default == inspect.Parameter.empty or param_name in self.required:
             #     self.function_schema['parameters']['required'].append(param_name)
 
-    def convert_args(self,function_args: Dict[str, Any]) -> Dict[str, Any]:
-        '''Validate and convert all arguments within function_args
+    def convert_args(self, function_args: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate and convert all arguments within function_args
         with the Converters.
 
         Args:
@@ -134,23 +142,23 @@ class LibCommand:
 
         Returns:
             Dict[str, Any]: The converted function argument dictionary.
-        '''
-        schema=self.function_schema
-        parameters=schema['parameters']
-        logs.info("converting args for function %s, args:%s", self.function_name,function_args)
+        """
+        schema = self.function_schema
+        parameters = schema["parameters"]
+        logs.info("converting args for function %s, args:%s", self.function_name, function_args)
 
-        for i, v in parameters['properties'].items():
+        for i, v in parameters["properties"].items():
             if i in function_args:
-                converter=self.param_converters[i]
+                converter = self.param_converters[i]
 
-                result=ConvertStatic.schema_validate(i,function_args[i],v,converter)
+                result = ConvertStatic.schema_validate(i, function_args[i], v, converter)
 
-                logs.info("arg %s converted into %s", i,result)
-                function_args[i]=result
+                logs.info("arg %s converted into %s", i, result)
+                function_args[i] = result
         return function_args
 
-    def check_force(self,query:str) -> bool:
-        '''
+    def check_force(self, query: str) -> bool:
+        """
         Checks if the given query contains any of the command's force words.
 
         Args:
@@ -159,15 +167,14 @@ class LibCommand:
         Returns:
 
             bool: True if the query contains force words, False otherwise.
-        '''
+        """
         if self.force_words:
-            pattern = r'\b(?:{})\b'.format('|'.join(map(re.escape,  self.force_words)))
+            pattern = r"\b(?:{})\b".format("|".join(map(re.escape, self.force_words)))
             regex = re.compile(pattern, re.IGNORECASE)
             match = regex.search(query)
             if match:
                 return True
         return False
-
 
 
 class GPTFunctionLibrary:
@@ -190,7 +197,8 @@ class GPTFunctionLibrary:
 
     FunctionDict: Dict[str, LibCommand] = {}
     do_expression: bool = False
-    my_math_parser:callable=None
+    my_math_parser: callable = None
+
     def __new__(cls, *args: Any, **kwargs: Any) -> Any:
         """
         Override the __new__ method to update the FunctionDict when instantiating or subclassing.
@@ -211,25 +219,32 @@ class GPTFunctionLibrary:
         for name, method in self.__class__.__dict__.items():
             if hasattr(method, "libcommand"):
                 function_name = method.libcommand.function_name or method.__name__
-                logs.info("adding %s: '%s' into %s function_dictionary",method.libcommand.comm_type,function_name,self.__class__.__name__)
+                logs.info(
+                    "adding %s: '%s' into %s function_dictionary",
+                    method.libcommand.comm_type,
+                    function_name,
+                    self.__class__.__name__,
+                )
                 self.FunctionDict[function_name] = method.libcommand
 
-    def force_word_check(self,query:str):
-        '''
+    def force_word_check(self, query: str):
+        """
         Check if the query contains the force words of any command.
         force words will force OpenAI to invoke THAT particular command, as opposed to
         invoking a command automatically.
-        '''
+        """
         functions_with_schema = []
         for name, method in self.FunctionDict.items():
-            schema=None
-            comm=method
+            schema = None
+            comm = method
 
             if comm:
                 if comm.check_force(query):
-                    schema=comm.function_schema
-                    return [schema]
+                    schema = comm.function_schema
+                    new = {"type": "function", "function": schema}
+                    return [new]
         return None
+
     def get_schema(self) -> List[Dict[str, Any]]:
         """
         Get the list of function schema dictionaries representing callable methods, coroutines, or bot Commands available to the library.
@@ -239,59 +254,85 @@ class GPTFunctionLibrary:
         """
         functions_with_schema = []
         for name, libmethod in self.FunctionDict.items():
-            schema=None
+            schema = None
             if libmethod.enabled:
-                schema=libmethod.function_schema
-            if schema!=None:
-                if schema.get('parameters',None)!=None:
+                schema = libmethod.function_schema
+            if schema != None:
+                if schema.get("parameters", None) != None:
                     functions_with_schema.append(schema)
         return functions_with_schema
 
+    def get_tool_schema(self) -> List[Dict[str, Any]]:
+        """
+        Get the list of function schema dictionaries representing callable methods, coroutines, or bot Commands available to the library.
+
+        Returns:
+            A list of function schema dictionaries from each decorated method or Command
+        """
+        functions_with_schema = []
+        for name, libmethod in self.FunctionDict.items():
+            schema = None
+            if libmethod.enabled:
+                schema = libmethod.function_schema
+            if schema != None:
+                if schema.get("parameters", None) != None:
+                    new = {"type": "function", "function": schema}
+                    functions_with_schema.append(new)
+        return functions_with_schema
+
     def expression_match(self, function_args: str):
-        '''because sometimes, the API returns an expression and not a single integer.'''
-        if self.do_expression and self.my_math_parser!=None:
-            '''In case I want to change how I want to parse expressions later.'''
+        """because sometimes, the API returns an expression and not a single integer."""
+        if self.do_expression and self.my_math_parser != None:
+            """In case I want to change how I want to parse expressions later."""
             expression_detect_pattern = r'(?<=:\s)([^"]*?[+\-*/][^"]*?)(?=(?:,|\s*\}))'
             return re.sub(expression_detect_pattern, lambda m: self.my_math_parser(m.group()), function_args)
         return function_args
 
     def parse_name_args(self, function_dict: Dict[str, Any]) -> Dict[str, Any]:
-        '''parse the args within function_dict, and apply any needed corrections to the JSON.'''
-        function_name = function_dict.get('name')
-        function_args = function_dict.get('arguments', None)
+        """parse the args within function_dict, and apply any needed corrections to the JSON."""
+        function_name = function_dict.get("name")
+        function_args = function_dict.get("arguments", None)
         if function_name in self.FunctionDict:
-            if isinstance(function_args,str):
-                #Making it so it won't break on poorly formatted function arguments.
-                function_args=function_args.replace("\\n",'\n')
+            if isinstance(function_args, str):
+                # Making it so it won't break on poorly formatted function arguments.
+                function_args = function_args.replace("\\n", "\n")
                 quoteescapefixpattern = r"(?<=:\s\")(.*?)(?=\"(?:,|\s*\}))"
-                #In testing, I once had the API return a poorly escaped function_args attribute
-                #That could not be parsed by json.loads, so hence this regex.
-                function_args_str=re.sub(quoteescapefixpattern, lambda m: m.group().replace('"', r'\"'), function_args)
+                # In testing, I once had the API return a poorly escaped function_args attribute
+                # That could not be parsed by json.loads, so hence this regex.
+                function_args_str = re.sub(
+                    quoteescapefixpattern, lambda m: m.group().replace('"', r"\""), function_args
+                )
 
-                #This regex is for detecting if there's an expression as a value and not a single integer.
-                #Which has happened before during testing.
-                function_args_str=self.expression_match(function_args_str)
-                logs.info('transformed json args for func %s.  result:\n%s',function_name,function_args_str)
+                # This regex is for detecting if there's an expression as a value and not a single integer.
+                # Which has happened before during testing.
+                function_args_str = self.expression_match(function_args_str)
+                logs.info("transformed json args for func %s.  result:\n%s", function_name, function_args_str)
                 try:
-                    function_args=json.loads(function_args_str, strict=False)
+                    function_args = json.loads(function_args_str, strict=False)
                 except json.JSONDecodeError as e:
-                    #Something went wrong while parsing, return where.
-                    output=f"JSONDecodeError: {e.msg} at line {e.lineno} column {e.colno}: `{function_args_str[e.pos]}`"
-                    raise ArgDecodeError(function_name=function_name,arguments=function_args_str,msg=f"{output}", er=e)
-            return function_name,function_args
-        raise FunctionNotFound(function_name=function_name,arguments=function_args)
+                    # Something went wrong while parsing, return where.
+                    output = (
+                        f"JSONDecodeError: {e.msg} at line {e.lineno} column {e.colno}: `{function_args_str[e.pos]}`"
+                    )
+                    raise ArgDecodeError(
+                        function_name=function_name, arguments=function_args_str, msg=f"{output}", er=e
+                    )
+            return function_name, function_args
+        raise FunctionNotFound(function_name=function_name, arguments=function_args)
 
-    def convert_args(self, function_name:str, function_args:Dict[str, Any]) -> Dict[str, Any]:
-        '''Preform any needed conversion of the function arguments.'''
-        libmethod=self.FunctionDict[function_name]
+    def convert_args(self, function_name: str, function_args: Dict[str, Any]) -> Dict[str, Any]:
+        """Preform any needed conversion of the function arguments."""
+        libmethod = self.FunctionDict[function_name]
+
         return libmethod.convert_args(function_args)
 
-    def default_callback(self,function_name:str,function_args:str="NONE")->str:
-        '''This is called whenever an invalid function is called.'''
-        output=f"{function_name} is not a valid function."
-        function_args=function_args.replace("\\n",'\n')
-        output+="\n```{function_args}```"
+    def default_callback(self, function_name: str, function_args: str = "NONE") -> str:
+        """This is called whenever an invalid function is called."""
+        output = f"{function_name} is not a valid function."
+        function_args = function_args.replace("\\n", "\n")
+        output += "\n```{function_args}```"
         return output
+
     def call_by_dict(self, function_dict: Dict[str, Any]) -> Any:
         """
         Call a function based on the provided dictionary.
@@ -306,25 +347,26 @@ class GPTFunctionLibrary:
             AttributeError: If the function name is not found or not callable.
         """
         try:
-            function_name,function_args=self.parse_name_args(function_dict)
+            function_name, function_args = self.parse_name_args(function_dict)
         except GPTLibError as e:
             if isinstance(e, FunctionNotFound):
-                '''Invoke a default function so something is returned...'''
-                return self.default_callback(e.function_name,e.arguments)
+                """Invoke a default function so something is returned..."""
+                return self.default_callback(e.function_name, e.arguments)
 
-            result=str(e)
+            result = str(e)
             return result
         libmethod = self.FunctionDict.get(function_name)
-        if libmethod.comm_type=='callable':
-            function_args=libmethod.convert_args(function_args)
-            if len(function_args)>0:
-                #for i, v in function_args.items():
+        if libmethod.comm_type == "callable":
+            function_args = libmethod.convert_args(function_args)
+            if len(function_args) > 0:
+                # for i, v in function_args.items():
                 #    print("st",i,v)
                 return libmethod.command(self, **function_args)
             return libmethod.command(self)
         else:
             raise AttributeError(f"Method '{function_name}' not found or not callable.")
-    async def call_by_dict_async(self,function_dict: Dict[str, Any]):
+
+    async def call_by_dict_async(self, function_dict: Dict[str, Any]):
         """
         Call an function based on the provided dictionary.
         This function works with coroutines.
@@ -339,36 +381,93 @@ class GPTFunctionLibrary:
             AttributeError: If the function name is not found or not callable.
         """
         try:
-            function_name,function_args=self.parse_name_args(function_dict)
+            function_name, function_args = self.parse_name_args(function_dict)
         except GPTLibError as e:
             if isinstance(e, FunctionNotFound):
-                '''Invoke a default function so something is returned...'''
-                return self.default_callback(e.function_name,e.arguments)
+                """Invoke a default function so something is returned..."""
+                return self.default_callback(e.function_name, e.arguments)
 
-            result=str(e)
+            result = str(e)
             return result
         libmethod = self.FunctionDict.get(function_name)
 
-        if libmethod.comm_type=='coroutine':
-            if len(function_args)>0:
-                return await libmethod.command(self,**function_args)
+        if libmethod.comm_type == "coroutine":
+            if len(function_args) > 0:
+                return await libmethod.command(self, **function_args)
             return await libmethod.command(self)
 
-        elif libmethod.comm_type=='callable':
-            function_args=libmethod.convert_args(function_args)
-            if len(function_args)>0:
+        elif libmethod.comm_type == "callable":
+            function_args = libmethod.convert_args(function_args)
+            if len(function_args) > 0:
                 return libmethod.command(self, **function_args)
             return libmethod.command(self)
         else:
             raise AttributeError(f"Method '{function_name}' not found or not callable.")
 
-def genspec(name:str,description:str,**kwargs):
-    spec={}
-    spec[name]={}
-    spec[name]['description']=description
+    def call_by_tool(self, tool_call):
+        """
+        Call a function based on the syntax from the tool object.
+
+        Args:
+            tool_call (Any): Tool parameters returned by openai
+
+        Returns:
+            The result of the function call.
+
+        Raises:
+            AttributeError: If the function name is not found or not callable.
+        """
+        function_name = tool_call.function.name
+
+        function_args = tool_call.function.arguments
+        dictv = {"name": function_name, "arguments": function_args}
+        function_response = self.call_by_dict(dictv)
+        out = {
+            "tool_call_id": tool_call.id,
+            "role": "tool",
+            "name": function_name,
+            "content": function_response,
+        }
+        return out
+
+    async def call_by_tool_async(self, tool_call):
+        """
+        Asyncio version of call by tool.
+        Call a function based on the syntax from the tool object.
+        works with coroutines.
+
+        Args:
+            tool_call (Any): Tool parameters returned by openai
+
+        Returns:
+            The result of the function call.
+
+        Raises:
+            AttributeError: If the function name is not found or not callable.
+        """
+        function_name = tool_call.function.name
+
+        function_args = tool_call.function.arguments
+        dictv = {"name": function_name, "arguments": function_args}
+        function_response = await self.call_by_dict_async(dictv)
+        out = {
+            "tool_call_id": tool_call.id,
+            "role": "tool",
+            "name": function_name,
+            "content": function_response,
+        }
+        return out
+
+
+def genspec(name: str, description: str, **kwargs):
+    spec = {}
+    spec[name] = {}
+    spec[name]["description"] = description
     spec[name].update(kwargs)
     return spec
-def LibParamSpec(name:str,description:str,**kwargs):
+
+
+def LibParamSpec(name: str, description: str, **kwargs):
     """
     A much more advanced variant of LibParam.  Set a function's description as well as
     additional arguments depending on the schema's type.
@@ -383,13 +482,16 @@ def LibParamSpec(name:str,description:str,**kwargs):
     Returns:
         The decorated function.
     """
+
     def decorator(func: callable) -> callable:
         if not hasattr(func, "parameter_decorators"):
             func.parameter_decorators = {}
-        gen=genspec(name,description,**kwargs)
+        gen = genspec(name, description, **kwargs)
         func.parameter_decorators.update(gen)
         return func
+
     return decorator
+
 
 def LibParam(**kwargs: Any) -> Any:
     """
@@ -400,14 +502,19 @@ def LibParam(**kwargs: Any) -> Any:
     Returns:
         The decorated function.
     """
+
     def decorator(func: callable) -> callable:
         if not hasattr(func, "parameter_decorators"):
             func.parameter_decorators = {}
         func.parameter_decorators.update(kwargs)
         return func
+
     return decorator
 
-def AILibFunction(name: str, description: str, required:List[str]=[],force_words:List[str]=[], enabled=True) -> Any:
+
+def AILibFunction(
+    name: str, description: str, required: List[str] = [], force_words: List[str] = [], enabled=True
+) -> Any:
     """
     Flags a callable method, Coroutine, or discord.py Command, creating a LibCommand object.
     In the case of a bot Command, the schema is added into the Command.extras attribute.
@@ -426,9 +533,10 @@ def AILibFunction(name: str, description: str, required:List[str]=[],force_words
     Returns:
         callable, Coroutine, or Command.
     """
-    def decorator(func: Union[callable,Coroutine]):
-        mycommand=LibCommand(func,name,description,required,force_words,enabled)
-        func.libcommand=mycommand
+
+    def decorator(func: Union[callable, Coroutine]):
+        mycommand = LibCommand(func, name, description, required, force_words, enabled)
+        func.libcommand = mycommand
 
         return func
 

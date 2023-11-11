@@ -7,16 +7,12 @@ from typing import Any, Coroutine, Dict, List, Optional, Union
 from enum import Enum, EnumMeta
 
 from datetime import datetime
-from discord.ext.commands import (
-    Command,
-    Context,
-    Bot,
-    CommandNotFound,
-    CheckFailure
-)
+from discord.ext.commands import Command, Context, Bot, CommandNotFound, CheckFailure
 from .functionlib import GPTFunctionLibrary, LibCommand, genspec
 from .convertutil import ConvertStatic
 from .errors import *
+
+
 class CommandSingleton:
     _instance = None
     _commands = {}
@@ -35,20 +31,32 @@ class CommandSingleton:
     def load_command(name):
         return CommandSingleton._commands.get(name, None)
 
-substitutions={
-    'str':'string',
-    'int':'integer',
-    'bool':'boolean',
-    'float':'number',
-    'datetime':'string',
-    'Literal':'string'
+
+substitutions = {
+    "str": "string",
+    "int": "integer",
+    "bool": "boolean",
+    "float": "number",
+    "datetime": "string",
+    "Literal": "string",
 }
+
+
 class LibCommandDisc(LibCommand):
-    '''This class is a container for functions, coroutines, and discord.py Commands
+    """This class is a container for functions, coroutines, and discord.py Commands
     that have been annotated with the LibParam and the AILibFunction decorators,
-    wrapping them up with attributes that help the GPTFunctionLibary invoke them.'''
-    def __init__(self, func: Union[Command,callable,Coroutine], name: str, description: str, required:List[str]=[],force_words:List[str]=[], enabled=True):
-        '''
+    wrapping them up with attributes that help the GPTFunctionLibary invoke them."""
+
+    def __init__(
+        self,
+        func: Union[Command, callable, Coroutine],
+        name: str,
+        description: str,
+        required: List[str] = [],
+        force_words: List[str] = [],
+        enabled=True,
+    ):
+        """
         Description: This class represents a library command. It encapsulates a Discord bot command, along with its associated metadata and functionality.
 
         Args:
@@ -58,66 +66,64 @@ class LibCommandDisc(LibCommand):
             required (List[str], optional): A list of required parameter names. Defaults to an empty list.
             force_words (List[str], optional): A list of force words. Defaults to an empty list.
             enabled (bool, optional): Indicates whether the command is enabled. Defaults to True.
-        '''
-        self.command=func
-        self.internal_name=self.function_name=name
-        self.comm_type='callable'
+        """
+        self.command = func
+        self.internal_name = self.function_name = name
+        self.comm_type = "callable"
 
         if isinstance(func, Command):
-            self.function_name=func.qualified_name
-            self.comm_type='command'
+            self.function_name = func.qualified_name
+            self.comm_type = "command"
 
-            logs.info("initalizing %s, comm type is %s",self.function_name,self.comm_type)
-            my_schema= {
-                'name': self.function_name,
-                'description': description,
-                'parameters':{'type': 'object','properties': {},'required': []}
+            logs.info("initalizing %s, comm type is %s", self.function_name, self.comm_type)
+            my_schema = {
+                "name": self.function_name,
+                "description": description,
+                "parameters": {"type": "object", "properties": {}, "required": []},
             }
 
-            self.function_schema=my_schema
-            self.required=required
-            self.param_converters={}
-            #if 'parameter_decorators' in func.extras:
+            self.function_schema = my_schema
+            self.required = required
+            self.param_converters = {}
+            # if 'parameter_decorators' in func.extras:
             self.param_iterate()
-            self.enabled=enabled
-            self.force_words=force_words
+            self.enabled = enabled
+            self.force_words = force_words
         else:
-            super().__init__(func, name, description, required,force_words,enabled)
+            super().__init__(func, name, description, required, force_words, enabled)
+
     def param_iterate(self):
-        '''
+        """
         Iterates over the command's arguments and update the function_schema dictionary with parameter information.
         Every parameter that isn't 'self' or ctx must be added!
-        '''
-        func=self.command
-        paramdict={}
-        param_decorators={}
-        if self.comm_type=='command':
-            if hasattr(func,'parameter_decorators'): #if 'parameter_decorators' in func.extras:
-                paramdict=func.clean_params
-                param_decorators=func.parameter_decorators#['parameter_decorators']
+        """
+        func = self.command
+        paramdict = {}
+        param_decorators = {}
+        if self.comm_type == "command":
+            if hasattr(func, "parameter_decorators"):  # if 'parameter_decorators' in func.extras:
+                paramdict = func.clean_params
+                param_decorators = func.parameter_decorators  # ['parameter_decorators']
         else:
             sig = inspect.signature(func)
-            if hasattr(func,'parameter_decorators'):
-                paramdict=sig.parameters
-                param_decorators=func.parameter_decorators
+            if hasattr(func, "parameter_decorators"):
+                paramdict = sig.parameters
+                param_decorators = func.parameter_decorators
 
-        self.function_schema.update(
-            { 'parameters': {'type': 'object','properties': {},'required': []}}
-        )
+        self.function_schema.update({"parameters": {"type": "object", "properties": {}, "required": []}})
         for param_name, param in paramdict.items():
-            decs=param_decorators.get(param_name, '')
+            decs = param_decorators.get(param_name, "")
 
-            param_info, converter=ConvertStatic.parameter_into_schema(param_name,param,dec=decs)
+            param_info, converter = ConvertStatic.parameter_into_schema(param_name, param, dec=decs)
 
             if param_info is not None:
-                self.param_converters[param_name]=converter
-                self.function_schema['parameters']['properties'][param_name] = param_info
+                self.param_converters[param_name] = converter
+                self.function_schema["parameters"]["properties"][param_name] = param_info
                 if param.default == inspect.Parameter.empty or param_name in self.required:
-                    self.function_schema['parameters']['required'].append(param_name)
+                    self.function_schema["parameters"]["required"].append(param_name)
 
-
-    async def invoke_command(self,ctx:Context,function_args:Dict[str,Any]) -> Any:
-        '''
+    async def invoke_command(self, ctx: Context, function_args: Dict[str, Any]) -> Any:
+        """
         Invokes the LibCommand's associated Discord bot command with the given function arguments.
 
         Args:
@@ -129,34 +135,35 @@ class LibCommandDisc(LibCommand):
 
             Any: The outcome of the command execution.
 
-        '''
-        bot=ctx.bot
-        command=bot.get_command(self.function_name)
-        ctx.command=command
-        outcome="Done"
-        function_args=self.convert_args(function_args)
-        if len(function_args)>0:
+        """
+        bot = ctx.bot
+        command = bot.get_command(self.function_name)
+        ctx.command = command
+        outcome = "Done"
+        function_args = self.convert_args(function_args)
+        if len(function_args) > 0:
             for i, v in command.clean_params.items():
                 if not i in function_args:
-                    function_args[i]=v.default
-            ctx.kwargs=(function_args)
+                    function_args[i] = v.default
+            ctx.kwargs = function_args
         if ctx.command is not None:
-            bot.dispatch('command', ctx)
+            bot.dispatch("command", ctx)
             try:
                 if await bot.can_run(ctx, call_once=True):
-                    outcome2=await ctx.invoke(command,**function_args)
-                    if outcome2!=None:
-                        outcome=outcome2
+                    outcome2 = await ctx.invoke(command, **function_args)
+                    if outcome2 != None:
+                        outcome = outcome2
                 else:
-                    raise CheckFailure('The global check once functions failed.')
+                    raise CheckFailure("The global check once functions failed.")
             except Exception as exc:
-                bot.dispatch('command_error', ctx, exc)
+                bot.dispatch("command_error", ctx, exc)
             else:
-                bot.dispatch('command_completion', ctx)
+                bot.dispatch("command_completion", ctx)
         elif ctx.invoked_with:
-            exc =  CommandNotFound(f'Command "{self.function_name}" is not found')
-            bot.dispatch('command_error', ctx, exc)
+            exc = CommandNotFound(f'Command "{self.function_name}" is not found')
+            bot.dispatch("command_error", ctx, exc)
         return outcome
+
 
 class GPTFunctionLibraryDisc(GPTFunctionLibrary):
     """
@@ -178,9 +185,10 @@ class GPTFunctionLibraryDisc(GPTFunctionLibrary):
         FunctionDict ( Dict[str, Union[Command,callable]]): A dictionary mapping command and method names to the corresponding Command or methods
     """
 
-    FunctionDict: Dict[str, Union[Command,callable]] = {}
+    FunctionDict: Dict[str, Union[Command, callable]] = {}
     do_expression: bool = False
-    my_math_parser:callable=None
+    my_math_parser: callable = None
+
     def __new__(cls, *args: Any, **kwargs: Any) -> Any:
         """
         Override the __new__ method to update the FunctionDict when instantiating or subclassing.
@@ -192,7 +200,7 @@ class GPTFunctionLibraryDisc(GPTFunctionLibrary):
         new_cls._update_function_dict()
         return new_cls
 
-    def add_in_commands(self,bot:Bot) -> None:
+    def add_in_commands(self, bot: Bot) -> None:
         """
         Update the FunctionDict with decorated discord.py bot commands.
         This has to be called somewhere before a call to the AI API if you
@@ -200,14 +208,18 @@ class GPTFunctionLibraryDisc(GPTFunctionLibrary):
         """
         for command in bot.walk_commands():
             if "libcommand" in command.extras:
-                libcommand=command.extras["libcommand"]
-                logs.info("adding %s: '%s' into %s function_dictionary",libcommand.comm_type,command.qualified_name,self.__class__.__name__)
+                libcommand = command.extras["libcommand"]
+                logs.info(
+                    "adding %s: '%s' into %s function_dictionary",
+                    libcommand.comm_type,
+                    command.qualified_name,
+                    self.__class__.__name__,
+                )
 
                 function_name = command.qualified_name
                 self.FunctionDict[function_name] = libcommand
 
-
-    async def call_by_dict_ctx(self, ctx:Context, function_dict: Dict[str, Any]) -> Coroutine:
+    async def call_by_dict_ctx(self, ctx: Context, function_dict: Dict[str, Any]) -> Coroutine:
         """
         Call a Coroutine or Bot Command based on the provided dictionary.
         Bot Commands must be decorated.
@@ -224,34 +236,62 @@ class GPTFunctionLibraryDisc(GPTFunctionLibrary):
             AttributeError: If the function name is not found or not callable.
         """
         try:
-            function_name,function_args=self.parse_name_args(function_dict)
+            function_name, function_args = self.parse_name_args(function_dict)
         except GPTLibError as e:
             if isinstance(e, FunctionNotFound):
-                return self.default_callback(e.function_name,e.arguments)
+                return self.default_callback(e.function_name, e.arguments)
 
-            result=str(e)
+            result = str(e)
             return result
 
         libmethod = self.FunctionDict.get(function_name)
-        logs.info('invoking %s `%s` with args %s',libmethod.comm_type, function_name, function_args)
-        if libmethod.comm_type=='command':
-
+        logs.info("invoking %s `%s` with args %s", libmethod.comm_type, function_name, function_args)
+        if libmethod.comm_type == "command":
             return await libmethod.invoke_command(ctx, function_args)
 
         else:
-            if libmethod.comm_type=='coroutine':
-                if len(function_args)>0:
-                    return await libmethod.command(self,**function_args)
+            if libmethod.comm_type == "coroutine":
+                if len(function_args) > 0:
+                    return await libmethod.command(self, **function_args)
                 return await libmethod.command(self)
-            elif libmethod.comm_type=='callable':
-                if len(function_args)>0:
-                    return libmethod.command(self,**function_args)
+            elif libmethod.comm_type == "callable":
+                if len(function_args) > 0:
+                    return libmethod.command(self, **function_args)
                 return libmethod.command(self)
             else:
                 raise AttributeError(f"Method '{function_name}' not found or not callable.")
 
+    async def call_by_tool_ctx(self, ctx: Context, tool_call: Any):
+        """
+        Call a Coroutine or Bot Command based on the provided tool_call object.
+        Bot Commands must be decorated.
 
-def LibParamSpec(name:str,description:Optional[str]=None,**kwargs):
+        Args:
+            ctx (commands.Context): context object.
+            tool_call (Any): Tool parameters returned by openai
+
+        Returns:
+            The result of the function call, or Done if there is no returned value.
+            This is so something can be added to the bot's message_chain.
+
+        Raises:
+            AttributeError: If the function name is not found or not callable.
+        """
+        function_name = tool_call.function.name
+
+        function_args = tool_call.function.arguments
+        dictv = {"name": function_name, "arguments": function_args}
+        function_response = await self.call_by_dict_ctx(ctx, dictv)
+        out = {
+            "tool_call_id": tool_call.id,
+            "role": "tool",
+            "name": function_name,
+            "content": function_response,
+        }
+        return out
+
+
+def LibParamSpec(name: str, description: Optional[str] = None, **kwargs):
     """
     A much more advanced variant of LibParam.  Set a function's description as well as
     additional arguments depending on the schema's type.
@@ -266,13 +306,16 @@ def LibParamSpec(name:str,description:Optional[str]=None,**kwargs):
     Returns:
         The decorated function.
     """
+
     def decorator(func: callable) -> callable:
         if not hasattr(func, "parameter_decorators"):
             func.parameter_decorators = {}
-        gen=genspec(name,description,**kwargs)
+        gen = genspec(name, description, **kwargs)
         func.parameter_decorators.update(gen)
         return func
+
     return decorator
+
 
 def LibParam(**kwargs: Any) -> Any:
     """
@@ -283,15 +326,19 @@ def LibParam(**kwargs: Any) -> Any:
     Returns:
         The decorated function.
     """
+
     def decorator(func: callable) -> callable:
         if not hasattr(func, "parameter_decorators"):
             func.parameter_decorators = {}
         func.parameter_decorators.update(kwargs)
         return func
+
     return decorator
 
 
-def AILibFunction(name: str, description: str, required:List[str]=[],force_words:List[str]=[], enabled=True) -> Any:
+def AILibFunction(
+    name: str, description: str, required: List[str] = [], force_words: List[str] = [], enabled=True
+) -> Any:
     """
     Flags a callable method, Coroutine, or discord.py Command, creating a LibCommand object.
     In the case of a bot Command, the schema is added into the Command.extras attribute.
@@ -310,15 +357,16 @@ def AILibFunction(name: str, description: str, required:List[str]=[],force_words
     Returns:
         callable, Coroutine, or Command.
     """
-    def decorator(func: Union[Command,callable,Coroutine]):
+
+    def decorator(func: Union[Command, callable, Coroutine]):
         if isinstance(func, Command):
-            #Added to the extras dictionary in the Command
-            mycommand=LibCommandDisc(func,name,description,required,force_words,enabled)
-            func.extras['libcommand']=mycommand
+            # Added to the extras dictionary in the Command
+            mycommand = LibCommandDisc(func, name, description, required, force_words, enabled)
+            func.extras["libcommand"] = mycommand
             return func
         else:
-            mycommand=LibCommandDisc(func,name,description,required,force_words,enabled)
-            func.libcommand=mycommand
+            mycommand = LibCommandDisc(func, name, description, required, force_words, enabled)
+            func.libcommand = mycommand
 
             return func
 
