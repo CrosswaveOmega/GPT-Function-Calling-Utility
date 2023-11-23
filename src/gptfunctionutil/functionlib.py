@@ -537,11 +537,6 @@ def AILibFunction(
     """
 
     def decorator(func: Union[callable, Coroutine]):
-        if requi is None:
-            requi = []
-        if forc is None:
-            forc = []
-
         mycommand = LibCommand(func, name, description, required, force_words, enabled)
         func.libcommand = mycommand
 
