@@ -1,4 +1,5 @@
-from .logger import logs
+from openai.types.chat import ChatCompletionMessageToolCall
+
 
 import inspect
 import json
@@ -11,6 +12,7 @@ from datetime import datetime
 
 from .errors import *
 from .convertutil import ConvertStatic
+from .logger import logs
 
 
 class CommandSingleton:
@@ -316,7 +318,7 @@ class GPTFunctionLibrary:
                     )
                     raise ArgDecodeError(
                         function_name=function_name, arguments=function_args_str, msg=f"{output}", er=e
-                    )
+                    ) from e
             return function_name, function_args
         raise FunctionNotFound(function_name=function_name, arguments=function_args)
 
@@ -404,12 +406,12 @@ class GPTFunctionLibrary:
         else:
             raise AttributeError(f"Method '{function_name}' not found or not callable.")
 
-    def call_by_tool(self, tool_call):
+    def call_by_tool(self, tool_call: ChatCompletionMessageToolCall):
         """
         Call a function based on the syntax from the tool object.
 
         Args:
-            tool_call (Any): Tool parameters returned by openai
+            tool_call (ChatCompletionMessageToolCall): Tool parameters returned by openai
 
         Returns:
             The result of the function call.
@@ -430,14 +432,14 @@ class GPTFunctionLibrary:
         }
         return out
 
-    async def call_by_tool_async(self, tool_call):
+    async def call_by_tool_async(self, tool_call: ChatCompletionMessageToolCall):
         """
         Asyncio version of call by tool.
         Call a function based on the syntax from the tool object.
         works with coroutines.
 
         Args:
-            tool_call (Any): Tool parameters returned by openai
+            tool_call (ChatCompletionMessageToolCall): Tool parameters returned by openai
 
         Returns:
             The result of the function call.
@@ -513,7 +515,7 @@ def LibParam(**kwargs: Any) -> Any:
 
 
 def AILibFunction(
-    name: str, description: str, required: List[str] = [], force_words: List[str] = [], enabled=True
+    name: str, description: str, required: List[str] = None, force_words: List[str] = None, enabled=True
 ) -> Any:
     """
     Flags a callable method, Coroutine, or discord.py Command, creating a LibCommand object.
@@ -535,6 +537,11 @@ def AILibFunction(
     """
 
     def decorator(func: Union[callable, Coroutine]):
+        if required is None:
+            required = []
+        if force_words is None:
+            force_words = []
+
         mycommand = LibCommand(func, name, description, required, force_words, enabled)
         func.libcommand = mycommand
 
