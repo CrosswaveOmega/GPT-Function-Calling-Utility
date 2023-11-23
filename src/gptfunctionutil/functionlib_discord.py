@@ -1,4 +1,5 @@
-from openai.types.chat import ChatCompletionMessageToolCall
+from __future__ import annotations
+
 
 from .logger import logs
 import inspect
@@ -263,7 +264,7 @@ class GPTFunctionLibraryDisc(GPTFunctionLibrary):
             else:
                 raise AttributeError(f"Method '{function_name}' not found or not callable.")
 
-    async def call_by_tool_ctx(self, ctx: Context, tool_call: ChatCompletionMessageToolCall):
+    async def call_by_tool_ctx(self, ctx: Context, tool_call: Any):
         """
         Call a Coroutine or Bot Command based on the provided tool_call object.
         Bot Commands must be decorated.

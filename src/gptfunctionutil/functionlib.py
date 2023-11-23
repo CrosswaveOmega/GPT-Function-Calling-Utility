@@ -1,4 +1,4 @@
-from openai.types.chat import ChatCompletionMessageToolCall
+from __future__ import annotations
 
 
 import inspect
@@ -406,7 +406,7 @@ class GPTFunctionLibrary:
         else:
             raise AttributeError(f"Method '{function_name}' not found or not callable.")
 
-    def call_by_tool(self, tool_call: ChatCompletionMessageToolCall):
+    def call_by_tool(self, tool_call: Any):
         """
         Call a function based on the syntax from the tool object.
 
@@ -432,7 +432,7 @@ class GPTFunctionLibrary:
         }
         return out
 
-    async def call_by_tool_async(self, tool_call: ChatCompletionMessageToolCall):
+    async def call_by_tool_async(self, tool_call: Any):
         """
         Asyncio version of call by tool.
         Call a function based on the syntax from the tool object.
