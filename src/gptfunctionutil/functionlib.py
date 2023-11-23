@@ -515,7 +515,7 @@ def LibParam(**kwargs: Any) -> Any:
 
 
 def AILibFunction(
-    name: str, description: str, required: List[str] = None, force_words: List[str] = None, enabled=True
+    name: str, description: str, required: List[str] = [], force_words: List[str] = [], enabled=True
 ) -> Any:
     """
     Flags a callable method, Coroutine, or discord.py Command, creating a LibCommand object.
@@ -537,10 +537,10 @@ def AILibFunction(
     """
 
     def decorator(func: Union[callable, Coroutine]):
-        if required is None:
-            required = []
-        if force_words is None:
-            force_words = []
+        if requi is None:
+            requi = []
+        if forc is None:
+            forc = []
 
         mycommand = LibCommand(func, name, description, required, force_words, enabled)
         func.libcommand = mycommand
