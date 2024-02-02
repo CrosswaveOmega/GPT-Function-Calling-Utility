@@ -1,11 +1,5 @@
-import json
-from .logger import logs
-
-
 class GPTLibError(Exception):
     """Base exception class for the GPT Library."""
-
-    pass
 
 
 class FunctionNotFound(GPTLibError):
@@ -41,6 +35,20 @@ class ArgDecodeError(GPTLibError):
 
 class InvalidFuncArg(GPTLibError):
     """Exception raised when there's a mismatch in function arguments."""
+
+    def __init__(self, message):
+        super().__init__(message)
+
+
+class NoToolParams(GPTLibError):
+    """Exception raised when no workable tool parameters are recieved from an AI Api."""
+
+    def __init__(self, message):
+        super().__init__(message)
+
+
+class WrongClient(GPTLibError):
+    """Exception raised the wrong client type was used in a SingleCall Object"""
 
     def __init__(self, message):
         super().__init__(message)

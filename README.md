@@ -2,7 +2,7 @@
 
 The GPT Function Calling Utility is a Python package designed to streamline the process of calling Python methods using OpenAI's Function Calling API, without wrapping around the OpenAI library.
 
-Please note that GPT Function Calling Utility does not directly make calls to OpenAI's API, but rather helps with function modeling and invocation when given a function_call field..
+Please note that GPT Function Calling Utility does not directly make calls to OpenAI's API, but rather helps with function modeling and invocation when given a function_call field.
 
 ## Installation
 ```
@@ -55,21 +55,24 @@ class MyLib(GPTFunctionLibrary):
 
 # Initialize the subclass somewhere in your code
 mylib = MyLib()
-completion = openai.ChatCompletion.create(
-    model="gpt-3.5-turbo-0613",
+client = openai.Client()
+
+completion = client.chat.completions.create(
+    model="gpt-3.5-turbo-1106",
     messages=[
         {"role": "system", "content": "You are a helpful assistant."},
         #This message will invoke get_time
         {"role": "user", "content": "Hello, get me the current time in UTC."}
     ],
-    functions=mylib.get_schema(),
-    function_call="auto"
+    "tools"=: mylib.get_tool_schema(),
+    "tool_choice"= 'auto',
 )
 message=completion.choices[0]['message']
-if 'function_call' in message:
-    result=mylib.call_by_dict(message['function_call'])
-    print(result)
+if message.tool_calls:
+    for tool in message.tool_calls:
+        output = mylib.call_by_tool(tool)
+        print(tool.name,output)
 else:
-    print(completion.choices[0]['message']['content'])
+    print(completion.choices[0].message.content)
 ```
 
