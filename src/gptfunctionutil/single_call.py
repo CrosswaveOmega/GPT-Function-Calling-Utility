@@ -150,7 +150,7 @@ class SingleCall(SingleCall_Core):
 
                 function = tool.function
                 output = self.mylib.call_by_tool(tool)
-                result_tuple = (function, output)
+                result_tuple = (function.name, output)
                 to_return.append(result_tuple)
             return to_return
         raise NoToolParams("The API did not return any valid tool calls in the response.")
@@ -209,7 +209,7 @@ class SingleCallAsync(SingleCall_Core):
             for tool in message.tool_calls:
                 function = tool.function
                 output = await self.mylib.call_by_tool_async(tool)
-                result_tuple = (function, output)
+                result_tuple = (function.name, output)
                 to_return.append(result_tuple)
             return to_return
         raise NoToolParams("The API did not return any valid tool calls in the response.")
