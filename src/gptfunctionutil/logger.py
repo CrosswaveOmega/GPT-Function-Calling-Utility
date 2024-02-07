@@ -4,7 +4,7 @@ import logging
 a simple logger.
 """
 logs = logging.getLogger("gptfunctionutil")
-logs.setLevel(logging.DEBUG)
+logs.setLevel(logging.ERROR)
 
 # Create a console handler and set the level to INFO
 console_handler = logging.StreamHandler()
@@ -17,3 +17,4 @@ console_handler.setFormatter(formatter)
 
 # Add the console handler to the logs
 logs.addHandler(console_handler)
+logs.removeHandler()

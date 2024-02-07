@@ -7,7 +7,9 @@ import openai
 
 class SingleCall_Core:
     """
-    A class to handle single API calls to a specified model using either synchronous or asynchronous client.
+    A class to handle single API calls to a specified model using
+    either synchronous or asynchronous client.
+
 
     Parameters
     ----------
@@ -19,6 +21,8 @@ class SingleCall_Core:
         The model to use for the API call. Defaults to "gpt-3.5-turbo-1106".
     systemprompt : str, optional
         The system prompt to use in the API call. Defaults to "You are a helpful assistant.".
+    timeout : Optional[float], optional
+        The timeout in seconds for the API call. Defaults to None.
 
     Attributes
     ----------
@@ -32,6 +36,9 @@ class SingleCall_Core:
         The asynchronous client, if provided.
     client : openai.Client, None
         The synchronous client, if provided.
+    timeout : Optional[float]
+        The timeout for the API call.
+
     """
 
     def __init__(
@@ -40,11 +47,13 @@ class SingleCall_Core:
         client: Union[openai.Client, openai.AsyncClient],
         model: str = "gpt-3.5-turbo-1106",
         systemprompt: str = "You are a helpful assistant.",
+        timeout: Optional[float] = None,
     ):
         self.model = model
         self.mylib = mylib
         self.systemprompt = systemprompt
         self.a_client = self.client = None
+        self.timeout = timeout
         if isinstance(client, openai.AsyncClient):
             self.a_client = client
         else:
@@ -84,6 +93,8 @@ class SingleCall_Core:
             "tools": self.mylib.get_tool_schema(),
             "tool_choice": callthis,
         }
+        if self.timeout:
+            kwargs["timeout"] = self.timeout
         return kwargs
 
 
