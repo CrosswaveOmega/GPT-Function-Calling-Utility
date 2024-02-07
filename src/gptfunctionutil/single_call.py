@@ -136,7 +136,8 @@ class SingleCall(SingleCall_Core):
         to_return = []
         if message.tool_calls:
             for tool in message.tool_calls:
-                function = tool.name
+
+                function = tool.function
                 output = self.mylib.call_by_tool(tool)
                 result_tuple = (function, output)
                 to_return.append(result_tuple)
@@ -195,7 +196,7 @@ class SingleCallAsync(SingleCall_Core):
         to_return = []
         if message.tool_calls:
             for tool in message.tool_calls:
-                function = tool.name
+                function = tool.function
                 output = await self.mylib.call_by_tool_async(tool)
                 result_tuple = (function, output)
                 to_return.append(result_tuple)
