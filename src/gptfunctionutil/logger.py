@@ -17,4 +17,3 @@ console_handler.setFormatter(formatter)
 
 # Add the console handler to the logs
 logs.addHandler(console_handler)
-logs.removeHandler()
