@@ -75,7 +75,7 @@ class LibCommand:
 
         self.function_schema = my_schema
         self.required = required
-        # if 'parameter_decorators' in func.extras:
+
         self.param_converters = {}
         self.param_iterate()
 

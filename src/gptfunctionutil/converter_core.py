@@ -207,7 +207,6 @@ class DatetimeConverter(StringConverter):
 
 
 class NumericConverter(Converter):
-
     """This Converter is for floats and integers"""
 
     def to_schema(self, param: inspect.Parameter, dec: Dict[str, Any]) -> Dict[str, Any]:
@@ -286,7 +285,7 @@ class NumericConverter(Converter):
 
 
 class ArrayConverter(Converter):
-    """This Converter is for Arrays.  Currenly unstable."""
+    """This Converter is for Arrays.  Currenly only works on 1D lists."""
 
     def to_schema(self, param: inspect.Parameter, dec: Dict[str, Any]) -> Dict[str, Any]:
         """
