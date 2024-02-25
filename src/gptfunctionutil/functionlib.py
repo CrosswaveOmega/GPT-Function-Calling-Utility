@@ -14,6 +14,8 @@ from .errors import *
 from .convertutil import ConvertStatic
 from .logger import logs
 
+from .util import parse_expression
+
 
 class CommandSingleton:
     _instance = None
@@ -197,9 +199,11 @@ class GPTFunctionLibrary:
         FunctionDict ( Dict[str, Union[Command,callable]]): A dictionary mapping command and method names to the corresponding Command or methods
     """
 
-    FunctionDict: Dict[str, LibCommand] = {}
-    do_expression: bool = False
-    my_math_parser: callable = None
+    def __init__(self):
+        self.FunctionDict: Dict[str, LibCommand] = {}
+        self.do_expression = False
+
+        self._update_function_dict()
 
     def __new__(cls, *args: Any, **kwargs: Any) -> Any:
         """
@@ -209,7 +213,7 @@ class GPTFunctionLibrary:
             The new instance of the class.
         """
         new_cls = super().__new__(cls, *args, **kwargs)
-        new_cls._update_function_dict()
+        # new_cls._update_function_dict()
         return new_cls
 
     def _update_function_dict(self) -> None:
@@ -284,10 +288,10 @@ class GPTFunctionLibrary:
 
     def expression_match(self, function_args: str):
         """because sometimes, the API returns an expression and not a single integer."""
-        if self.do_expression and self.my_math_parser != None:
+        if self.do_expression:
             """In case I want to change how I want to parse expressions later."""
             expression_detect_pattern = r'(?<=:\s)([^"]*?[+\-*/][^"]*?)(?=(?:,|\s*\}))'
-            return re.sub(expression_detect_pattern, lambda m: self.my_math_parser(m.group()), function_args)
+            return re.sub(expression_detect_pattern, lambda m: parse_expression(m.group()), function_args)
         return function_args
 
     def parse_name_args(self, function_dict: Dict[str, Any]) -> Dict[str, Any]:
@@ -497,7 +501,7 @@ def LibParamSpec(name: str, description: str, **kwargs):
 
 def LibParam(**kwargs: Any) -> Any:
     """
-    Decorator to add descriptions to any valid parameter inside a GPTFunctionLibary method or discord.py bot command.
+    Decorator to add descriptions to any valid parameter inside a GPTFunctionLibary method.
     AILibFunctions without this decorator will not be sent to the AI.
     Args:
         **kwargs: a function's parameters, and the description to be applied to each.

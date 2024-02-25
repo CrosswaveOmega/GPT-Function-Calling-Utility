@@ -188,9 +188,11 @@ class GPTFunctionLibraryDisc(GPTFunctionLibrary):
         FunctionDict ( Dict[str, Union[Command,callable]]): A dictionary mapping command and method names to the corresponding Command or methods
     """
 
-    FunctionDict: Dict[str, Union[Command, callable]] = {}
-    do_expression: bool = False
-    my_math_parser: callable = None
+    def __init__(self):
+        self.FunctionDict: Dict[str, LibCommand] = {}
+        self.do_expression = False
+
+        self._update_function_dict()
 
     def __new__(cls, *args: Any, **kwargs: Any) -> Any:
         """
@@ -200,7 +202,7 @@ class GPTFunctionLibraryDisc(GPTFunctionLibrary):
             The new instance of the class.
         """
         new_cls = super().__new__(cls, *args, **kwargs)
-        new_cls._update_function_dict()
+        # new_cls._update_function_dict()
         return new_cls
 
     def add_in_commands(self, bot: Bot) -> None:
