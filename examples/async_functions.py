@@ -22,7 +22,7 @@ class MyLib(GPTFunctionLibrary):
     )
     @LibParam(location="The city and state, e.g. San Francisco, CA")
     async def get_weather(self, location: str, unit: Literal["celsius", "fahrenheit"]):
-        # Wait for a set period of time.
+        # get weather in location.
         print("launcing weather.")
         return f"weather in {location} is {20} degrees {unit}'!"
 
