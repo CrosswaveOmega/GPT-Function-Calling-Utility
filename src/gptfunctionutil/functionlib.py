@@ -49,6 +49,7 @@ class LibCommand:
         required: List[str] = [],
         force_words: List[str] = [],
         enabled=True,
+        strict=False,
     ):
         """
         This class represents a library command. It encapsulates a callable method/coroutine,
@@ -73,6 +74,7 @@ class LibCommand:
             "name": self.function_name,
             "description": description,
             "parameters": {"type": "object", "properties": {}, "required": []},
+            "strict": strict,
         }
 
         self.function_schema = my_schema
@@ -83,6 +85,7 @@ class LibCommand:
 
         self.enabled = enabled
         self.force_words = force_words
+        self.strict = strict
 
     def param_iterate(self):
         """
@@ -519,7 +522,7 @@ def LibParam(**kwargs: Any) -> Any:
 
 
 def AILibFunction(
-    name: str, description: str, required: List[str] = [], force_words: List[str] = [], enabled=True
+    name: str, description: str, required: List[str] = [], force_words: List[str] = [], enabled=True, strict=False
 ) -> Any:
     """
     Flags a callable method, Coroutine, or discord.py Command, creating a LibCommand object.
@@ -536,12 +539,15 @@ def AILibFunction(
         required:List[str]: list of parameters you want the AI to always use reguardless of if they have defaults.
         force_words:List[str]: list of words that will be used to force this command to be triggered.
         enabled (bool): Whether or not this function is enabled by default.
+        strict (bool): Whether to enable strict schema adherence when generating the function call.
+            If set to true, the model will follow the exact schema defined in the parameters field.
+            Only a subset of JSON Schema is supported when strict is true
     Returns:
         callable, Coroutine, or Command.
     """
 
     def decorator(func: Union[callable, Coroutine]):
-        mycommand = LibCommand(func, name, description, required, force_words, enabled)
+        mycommand = LibCommand(func, name, description, required, force_words, enabled, strict)
         func.libcommand = mycommand
 
         return func

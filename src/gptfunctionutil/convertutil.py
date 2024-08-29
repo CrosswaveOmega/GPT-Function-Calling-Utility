@@ -54,7 +54,7 @@ class ConvertStatic:
         param_name: str, param: inspect.Parameter, dec: Union[str, Dict[str, any]]
     ) -> Tuple[Dict[str, any], Type[Converter]]:
         """
-        Generate a schema for the Converts a parameter signature into a schema.
+        Converts a parameter signature into a schema.
 
         Parameters:
             param_name (str): The name of the parameter.
@@ -81,7 +81,7 @@ class ConvertStatic:
         if typename in substitutions:
             converter = substitutions[typename]
         else:
-            logs.info(f"type %s was not found!", typename)
+            logs.info(f"type %s was not found!  Param is %s", typename, param_name)
             return None, None
         param_info = {}
         if decs.get("description", ""):

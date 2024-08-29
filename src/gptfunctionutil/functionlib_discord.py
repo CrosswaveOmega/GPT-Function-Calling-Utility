@@ -58,6 +58,7 @@ class LibCommandDisc(LibCommand):
         required: List[str] = [],
         force_words: List[str] = [],
         enabled=True,
+        strict=False,
     ):
         """
         Description: This class represents a library command. It encapsulates a Discord bot command, along with its associated metadata and functionality.
@@ -83,6 +84,7 @@ class LibCommandDisc(LibCommand):
                 "name": self.function_name,
                 "description": description,
                 "parameters": {"type": "object", "properties": {}, "required": []},
+                "strict": strict,
             }
 
             self.function_schema = my_schema
@@ -92,8 +94,9 @@ class LibCommandDisc(LibCommand):
             self.param_iterate()
             self.enabled = enabled
             self.force_words = force_words
+            self.strict = strict
         else:
-            super().__init__(func, name, description, required, force_words, enabled)
+            super().__init__(func, name, description, required, force_words, enabled, strict)
 
     def param_iterate(self):
         """
@@ -342,7 +345,7 @@ def LibParam(**kwargs: Any) -> Any:
 
 
 def AILibFunction(
-    name: str, description: str, required: List[str] = [], force_words: List[str] = [], enabled=True
+    name: str, description: str, required: List[str] = [], force_words: List[str] = [], enabled=True, strict=False
 ) -> Any:
     """
     Flags a callable method, Coroutine, or discord.py Command, creating a LibCommand object.
@@ -366,11 +369,11 @@ def AILibFunction(
     def decorator(func: Union[Command, callable, Coroutine]):
         if isinstance(func, Command):
             # Added to the extras dictionary in the Command
-            mycommand = LibCommandDisc(func, name, description, required, force_words, enabled)
+            mycommand = LibCommandDisc(func, name, description, required, force_words, enabled, strict)
             func.extras["libcommand"] = mycommand
             return func
         else:
-            mycommand = LibCommandDisc(func, name, description, required, force_words, enabled)
+            mycommand = LibCommandDisc(func, name, description, required, force_words, enabled, strict)
             func.libcommand = mycommand
 
             return func

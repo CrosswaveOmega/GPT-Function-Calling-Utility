@@ -58,7 +58,7 @@ mylib = MyLib()
 client = openai.Client()
 
 completion = client.chat.completions.create(
-    model="gpt-3.5-turbo-1106",
+    model="gpt-4o-mini",
     messages=[
         {"role": "system", "content": "You are a helpful assistant."},
         #This message will invoke get_time

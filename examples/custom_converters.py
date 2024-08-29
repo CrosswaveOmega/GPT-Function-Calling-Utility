@@ -68,7 +68,7 @@ mylib = MyLib()
 client = openai.Client()
 # Call OpenAI's api
 completion = client.chat.completions.create(
-    model="gpt-3.5-turbo-1106",
+    model="gpt-4o-mini",
     messages=[
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "Hello, show me <@1234567890>'s info."},

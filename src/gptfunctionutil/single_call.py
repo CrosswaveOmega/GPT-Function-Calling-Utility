@@ -18,7 +18,7 @@ class SingleCall_Core:
     client : Union[openai.Client, openai.AsyncClient]
         The OpenAI client, which could be either synchronous or asynchronous.
     model : str, optional
-        The model to use for the API call. Defaults to "gpt-3.5-turbo-1106".
+        The model to use for the API call. Defaults to "gpt-4o-mini".
     systemprompt : str, optional
         The system prompt to use in the API call. Defaults to "You are a helpful assistant.".
     timeout : Optional[float], optional
@@ -45,7 +45,7 @@ class SingleCall_Core:
         self,
         mylib: GPTFunctionLibrary,
         client: Union[openai.Client, openai.AsyncClient],
-        model: str = "gpt-3.5-turbo-1106",
+        model: str = "gpt-4o-mini",
         systemprompt: str = "You are a helpful assistant.",
         timeout: Optional[float] = None,
     ):
