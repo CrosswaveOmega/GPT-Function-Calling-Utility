@@ -4,6 +4,8 @@ The GPT Function Calling Utility is a Python package designed to streamline the 
 
 Please note that GPT Function Calling Utility does not directly make calls to OpenAI's API, but rather helps with function modeling and invocation when given a function_call field.
 
+It also works with Ollama's Python Library.
+
 ## Installation
 ```
 python -m pip install -U gptfunctionutil
