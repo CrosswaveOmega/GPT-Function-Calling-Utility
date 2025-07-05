@@ -31,7 +31,9 @@ class UserConverter(StringConverter):
     """This converter is for creating a new instance of user by extracting the ID
     from a mention, matched via regex."""
 
-    def to_schema(self, param: inspect.Parameter, dec: Dict[str, Any]) -> Dict[str, Any]:
+    def to_schema(
+        self, param: inspect.Parameter, dec: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """The regular expression is for ext"""
         schema = super().to_schema(param, dec)
         schema["pattern"] = r"<@!?(\d+)>"

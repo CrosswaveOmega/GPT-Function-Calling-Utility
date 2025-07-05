@@ -59,7 +59,9 @@ class SingleCall_Core:
         else:
             self.client = client
 
-    def format_kwargs(self, user_prompt, to_call: Union[str, Dict[str, Dict[str, str]]]) -> Dict[str, Any]:
+    def format_kwargs(
+        self, user_prompt, to_call: Union[str, Dict[str, Dict[str, str]]]
+    ) -> Dict[str, Any]:
         """
         Formats the arguments for API call from provided user prompt and tool choice.
 
@@ -116,7 +118,9 @@ class SingleCall(SingleCall_Core):
         returning a list of tuples containing tool names and their outputs.
     """
 
-    def call_single(self, user_prompt: str, to_call: str = "auto") -> List[Tuple[str, Any]]:
+    def call_single(
+        self, user_prompt: str, to_call: str = "auto"
+    ) -> List[Tuple[str, Any]]:
         """
         Perform a single synchronous API call to the OpenAI API with a user prompt and an optional tool selection.
 
@@ -141,19 +145,22 @@ class SingleCall(SingleCall_Core):
         """
         kwargs = self.format_kwargs(user_prompt, to_call)
         if self.client is None:
-            raise WrongClient("SingleCall requires an OpenAI.Client object. Please correct the initalization.")
+            raise WrongClient(
+                "SingleCall requires an OpenAI.Client object. Please correct the initalization."
+            )
         completion = self.client.chat.completions.create(**kwargs)
         message = completion.choices[0].message
         to_return = []
         if message.tool_calls:
             for tool in message.tool_calls:
-
                 function = tool.function
                 output = self.mylib.call_by_tool(tool)
                 result_tuple = (function.name, output)
                 to_return.append(result_tuple)
             return to_return
-        raise NoToolParams("The API did not return any valid tool calls in the response.")
+        raise NoToolParams(
+            "The API did not return any valid tool calls in the response."
+        )
 
 
 class SingleCallAsync(SingleCall_Core):
@@ -174,7 +181,9 @@ class SingleCallAsync(SingleCall_Core):
         returning a list of tuples containing tool names and their outputs.
     """
 
-    async def call_single(self, user_prompt: str, to_call: str = "auto") -> List[Tuple[str, Any]]:
+    async def call_single(
+        self, user_prompt: str, to_call: str = "auto"
+    ) -> List[Tuple[str, Any]]:
         """
         Perform a single asynchronous API call to the OpenAI API with a user prompt and an optional tool selection.
 
@@ -212,4 +221,6 @@ class SingleCallAsync(SingleCall_Core):
                 result_tuple = (function.name, output)
                 to_return.append(result_tuple)
             return to_return
-        raise NoToolParams("The API did not return any valid tool calls in the response.")
+        raise NoToolParams(
+            "The API did not return any valid tool calls in the response."
+        )

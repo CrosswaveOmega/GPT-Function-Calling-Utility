@@ -5,7 +5,12 @@ from inspect import Parameter
 import re
 from datetime import datetime
 
-from .errors import ConversionError, ConversionAddError, ConversionToError, ConversionFromError
+from .errors import (
+    ConversionError,
+    ConversionAddError,
+    ConversionToError,
+    ConversionFromError,
+)
 
 
 class Converter:
@@ -14,7 +19,9 @@ class Converter:
     convert/verify in return.
     """
 
-    def to_schema(self, param: inspect.Parameter, dec: Dict[str, Any]) -> Dict[str, Any]:
+    def to_schema(
+        self, param: inspect.Parameter, dec: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         Generate a schema from a parameter signature.
 
@@ -58,7 +65,9 @@ class BooleanConverter(Converter):
     This converter is for Boolean values.
     """
 
-    def to_schema(self, param: inspect.Parameter, dec: Dict[str, Any]) -> Dict[str, Any]:
+    def to_schema(
+        self, param: inspect.Parameter, dec: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         Generate a boolean type schema from a parameter signature.
 
@@ -88,7 +97,9 @@ class StringConverter(Converter):
     """This converter is for string types, as well as custom types that can be derived from strings,
     such as datetimes."""
 
-    def to_schema(self, param: inspect.Parameter, dec: Dict[str, Any]) -> Dict[str, Any]:
+    def to_schema(
+        self, param: inspect.Parameter, dec: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         Generate a schema (for a string type) from a parameter signature and declare additonal keywords.
 
@@ -154,7 +165,9 @@ class StringConverter(Converter):
 class DatetimeConverter(StringConverter):
     """This converter is for datetime objects, which are derived from a string."""
 
-    def to_schema(self, param: inspect.Parameter, dec: Dict[str, Any]) -> Dict[str, Any]:
+    def to_schema(
+        self, param: inspect.Parameter, dec: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         Generate a string type schema, and then apply a 'date-time' format.
         This will force OpenAI to return a formatted string with the function call
@@ -209,7 +222,9 @@ class DatetimeConverter(StringConverter):
 class NumericConverter(Converter):
     """This Converter is for floats and integers"""
 
-    def to_schema(self, param: inspect.Parameter, dec: Dict[str, Any]) -> Dict[str, Any]:
+    def to_schema(
+        self, param: inspect.Parameter, dec: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         Generate a number or integer type schema from a parameter signature and declare additonal keywords.
 
@@ -287,7 +302,9 @@ class NumericConverter(Converter):
 class ArrayConverter(Converter):
     """This Converter is for Arrays.  Currenly only works on 1D lists."""
 
-    def to_schema(self, param: inspect.Parameter, dec: Dict[str, Any]) -> Dict[str, Any]:
+    def to_schema(
+        self, param: inspect.Parameter, dec: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         Generate an array schema for a List or Tuple.
 
@@ -307,13 +324,19 @@ class ArrayConverter(Converter):
         -------
         """
         schema: Dict[str, Any] = {"type": "array"}
-        if param.annotation == list or getattr(param.annotation, "__origin__", None) == list:
+        if (
+            param.annotation == list
+            or getattr(param.annotation, "__origin__", None) == list
+        ):
             # Check if the annotation is 'list' or an instance of the 'List' type hint from typing module
             schema["items"] = {}
             element_type = getattr(param.annotation, "__args__", [Any])[0]
             schema["items"] = self._get_type_schema(element_type)
 
-        elif param.annotation == Tuple or getattr(param.annotation, "__origin__", None) == Tuple:
+        elif (
+            param.annotation == Tuple
+            or getattr(param.annotation, "__origin__", None) == Tuple
+        ):
             prefix_items = []
             for item_type in getattr(param.annotation, "__args__", [Any]):
                 prefix_items.append(self._get_type_schema(item_type))
@@ -380,7 +403,9 @@ class LiteralConverter(Converter):
     """Create enums from literals, eg Literal['a','b,'c'].
     Currently, only String Literals can be used.."""
 
-    def to_schema(self, param: inspect.Parameter, dec: Dict[str, Any]) -> Dict[str, Any]:
+    def to_schema(
+        self, param: inspect.Parameter, dec: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         Generate an enum schema for a passed in Literal annotated parameter schema.
 

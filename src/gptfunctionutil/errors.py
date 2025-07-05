@@ -28,7 +28,9 @@ class ArgDecodeError(GPTLibError):
     def __init__(self, function_name, arguments, er, **kwargs):
         self.function_name = function_name
         self.arguments = arguments
-        output = f" {er.msg} at line {er.lineno} column {er.colno}: `{arguments[er.pos]}`"
+        output = (
+            f" {er.msg} at line {er.lineno} column {er.colno}: `{arguments[er.pos]}`"
+        )
         message = f"ArgDecodeError for '{function_name}': {output} \n {arguments}"
         super().__init__(message, **kwargs)
 

@@ -18,12 +18,14 @@ class MyLib(GPTFunctionLibrary):
         return f"waited for {towait}'!"
 
     @AILibFunction(
-        name="get_current_weather", description="Get the current weather in a given location", required=["location"]
+        name="get_current_weather",
+        description="Get the current weather in a given location",
+        required=["location"],
     )
     @LibParam(location="The city and state, e.g. San Francisco, CA")
     async def get_weather(self, location: str, unit: Literal["celsius", "fahrenheit"]):
         # get weather in location.
-        print("launcing weather.")
+        print("launching weather.")
         return f"weather in {location} is {20} degrees {unit}'!"
 
 
@@ -57,7 +59,10 @@ async def main():
         model="gpt-4o-mini",
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": "What's the weather like in Boston today?  In C"},
+            {
+                "role": "user",
+                "content": "What's the weather like in Boston today?  In C",
+            },
         ],
         tools=mylib.get_tool_schema(),
         tool_choice="auto",

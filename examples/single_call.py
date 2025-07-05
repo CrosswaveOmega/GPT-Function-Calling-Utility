@@ -9,13 +9,17 @@ import asyncio
 
 
 class MyCall(GPTFunctionLibrary):
-
     @AILibFunction(
         name="followupquestions",
         description="Create a list of follow up questions to expand on a query.",
         required=["followup"],
     )
-    @LibParamSpec(name="followup", description="A list of followup questions.", minItems=3, maxItems=10)
+    @LibParamSpec(
+        name="followup",
+        description="A list of followup questions.",
+        minItems=3,
+        maxItems=10,
+    )
     def followup_questions(self, followup: List[str]):
         # Wait for a set period of time.
         print("foll:", followup)

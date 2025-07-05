@@ -67,7 +67,9 @@ class AICog(commands.Cog):
         if permissions.send_messages:
             pass
         else:
-            raise Exception(f"{message.channel.name}:{message.channel.id} send message permission not enabled.")
+            raise Exception(
+                f"{message.channel.name}:{message.channel.id} send message permission not enabled."
+            )
         if len(message.clean_content) > 2000:
             # Nitro users can send messages longer than 2000 characters.
             raise Exception(f"This message is too big.")

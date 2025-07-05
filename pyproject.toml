@@ -3,7 +3,7 @@ requires = ["setuptools", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 [project]
 name = 'gptfunctionutil'
-version = "0.3.7.3"
+version = "0.3.8.0"
 license = {file = "LICENSE"}
 authors = [{name="Crosswave Omega",email= "xtream2pro@gmail.com"}]
 description = "A simple package for the purpose of providing a set of utilities that make it easier to invoke python functions and coroutines using OpenAI's GPT models."
@@ -13,8 +13,10 @@ keywords = ['OpenAI', 'Function Calling API', 'GPT','asyncio']
 requires-python = '>=3.10'
 
 dependencies = [
-    "openai>=1.2.3",
-    "sympy>=1.12"
+    "openai>=1.93.0",
+    "ollama>=0.5.1",
+    "sympy>=1.14.0",
+    "pydantic>=2.0.0"
 ]
 
 [project.urls]
@@ -29,29 +31,29 @@ exclude = ['tests',  'docs']
 [project.optional-dependencies]
 
 discord = [
-    "discord>=2.1.0"
+    "discord>=2.3.2"
 ]
 spark = [
-    "pyspark>=3.0.0"
+    "pyspark>=4.0.0"
 ]
 test = [
-    "bandit[toml]==1.7.4",
-    "black==23.1.0",
-    "check-manifest==0.48",
-    "flake8-bugbear==23.3.12",
+    "bandit[toml]==1.8.5",
+    "black==25.1.0",
+    "check-manifest==0.50",
+    "flake8-bugbear==24.12.12",
     "flake8-docstrings",
     "flake8-formatter_junit_xml",
     "flake8",
     "flake8-pyproject",
-    "pre-commit==2.17.0",
-    "pylint==2.17.0",
+    "pre-commit==4.2.0",
+    "pylint==3.3.7",
     "pylint_junit",
-    "pytest-cov==3.0.0",
+    "pytest-cov==6.2.1",
     "pytest-mock<3.10.1",
     "pytest-runner",
-    "pytest==7.2.2",
+    "pytest==8.4.1",
     "pytest-github-actions-annotate-failures",
-    "shellcheck-py==0.9.0.2"
+    "shellcheck-py==0.10.0.1"
 ]
 
 [tool.bandit]

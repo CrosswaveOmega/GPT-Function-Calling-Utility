@@ -6,7 +6,12 @@ import re
 from datetime import datetime
 from typing import Type, TypeVar
 
-from .errors import ConversionError, ConversionAddError, ConversionToError, ConversionFromError
+from .errors import (
+    ConversionError,
+    ConversionAddError,
+    ConversionToError,
+    ConversionFromError,
+)
 from .converter_core import *
 
 to_ignore = ["_empty", "Context"]
@@ -72,9 +77,13 @@ class ConvertStatic:
         if isinstance(dec, str):
             decs = {"description": dec}
         if isinstance(param.annotation, str):
-            typename = param.annotation  # Treat the string annotation as a regular string
+            typename = (
+                param.annotation
+            )  # Treat the string annotation as a regular string
         else:
-            typename = param.annotation.__name__  # Access the __name__ attribute of the type object
+            typename = (
+                param.annotation.__name__
+            )  # Access the __name__ attribute of the type object
 
         oldtypename = typename
         converter = None
@@ -94,7 +103,12 @@ class ConvertStatic:
         return param_info, converter
 
     @staticmethod
-    def schema_validate(param_name: str, value: any, schema: Union[str, Dict[str, any]], converter: Converter) -> Any:
+    def schema_validate(
+        param_name: str,
+        value: any,
+        schema: Union[str, Dict[str, any]],
+        converter: Converter,
+    ) -> Any:
         """
         Validate and apply any needed conversions to value based on schema.
 
@@ -115,7 +129,9 @@ class ConvertStatic:
         if converter != None:
             typename = converter
         else:
-            error = ConversionFromError(param_name, value, schema, msg="No converter found.")
+            error = ConversionFromError(
+                param_name, value, schema, msg="No converter found."
+            )
             logs.error(error, exc_info=1, stack_info=True)
             raise error
         try:
