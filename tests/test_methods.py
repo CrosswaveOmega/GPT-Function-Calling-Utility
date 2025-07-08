@@ -15,7 +15,9 @@ import pytest
 @pytest.mark.asyncio
 async def test_command_function_load():
     class MyTestLib(GPTFunctionLibrary):
-        @AILibFunction(name="get_time", description="Get the current time and day in UTC.")
+        @AILibFunction(
+            name="get_time", description="Get the current time and day in UTC."
+        )
         @LibParam(comment="An interesting, amusing remark.")
         def get_time(self, comment: str):
             # This is an example of a decorated coroutine command.
@@ -39,7 +41,9 @@ async def test_command_function_load():
 @pytest.mark.asyncio
 async def test_command_function_errorsload():
     class MyTestLib(GPTFunctionLibrary):
-        @AILibFunction(name="get_time", description="Get the current time and day in UTC.")
+        @AILibFunction(
+            name="get_time", description="Get the current time and day in UTC."
+        )
         @LibParam(comment="An interesting, amusing remark.")
         def get_time(self, comment: str):
             # This is an example of a decorated coroutine command.
@@ -63,7 +67,9 @@ async def test_command_function_errorsload():
 @pytest.mark.asyncio
 async def test_advanced_objects():
     class MyTestLib2(GPTFunctionLibrary):
-        @AILibFunction(name="get_time", description="Get the current time and day in UTC.")
+        @AILibFunction(
+            name="get_time", description="Get the current time and day in UTC."
+        )
         @LibParam(comment="An interesting, amusing remark.")
         def get_time(self, comment: str):
             # This is an example of a decorated coroutine command.
@@ -84,7 +90,9 @@ async def test_advanced_objects():
     assert "name" in schema[0]
     assert schema[1]["name"] == "set_alarm"
 
-    result = testlib2.call_by_dict({"name": "set_alarm", "arguments": '{"alarm_time":"2018-11-13T20:20:39+00:00"}'})
+    result = testlib2.call_by_dict(
+        {"name": "set_alarm", "arguments": '{"alarm_time":"2018-11-13T20:20:39+00:00"}'}
+    )
     assert result == "2018-11-13"
 
 
@@ -93,7 +101,9 @@ async def test_ollama_tool_call():
     import ollama
 
     class MyTestLib2(GPTFunctionLibrary):
-        @AILibFunction(name="get_time", description="Get the current time and day in UTC.")
+        @AILibFunction(
+            name="get_time", description="Get the current time and day in UTC."
+        )
         @LibParam(comment="An interesting, amusing remark.")
         def get_time(self, comment: str):
             # This is an example of a decorated coroutine command.
@@ -276,7 +286,9 @@ async def test_numeric_converter_from_schema_not_multiple_of():
 @pytest.mark.asyncio
 async def test_array_converter_to_schema():
     converter = ArrayConverter()
-    param = inspect.Parameter("param", Parameter.POSITIONAL_OR_KEYWORD, annotation=List[str])
+    param = inspect.Parameter(
+        "param", Parameter.POSITIONAL_OR_KEYWORD, annotation=List[str]
+    )
     dec = {"minItems": 1, "maxItems": 5, "uniqueItems": True}
     expected_schema = {
         "type": "array",
@@ -312,7 +324,9 @@ async def test_check_converter():
             return str(self.user)
 
     class UserConverter(StringConverter):
-        def to_schema(self, param: inspect.Parameter, dec: Dict[str, Any]) -> Dict[str, Any]:
+        def to_schema(
+            self, param: inspect.Parameter, dec: Dict[str, Any]
+        ) -> Dict[str, Any]:
             schema = super().to_schema(param, dec)
             schema["pattern"] = r"<@!?(\d+)>"
             return schema
@@ -339,5 +353,7 @@ async def test_check_converter():
     schema = testlib3.get_schema()
     print(schema)
 
-    result = testlib3.call_by_dict({"name": "get_user", "arguments": '{"targetuser":"<@1234567890>"}'})
+    result = testlib3.call_by_dict(
+        {"name": "get_user", "arguments": '{"targetuser":"<@1234567890>"}'}
+    )
     assert result == "1234567890"

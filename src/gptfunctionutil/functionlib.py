@@ -4,13 +4,13 @@ from __future__ import annotations
 import inspect
 import json
 import re
-from typing import Any, Coroutine, Dict, List, Union
+from typing import Any, Callable, Coroutine, Dict, List, Union
 
 from enum import Enum, EnumMeta
 
 from datetime import datetime
 
-from gptfunctionutil.types import FunctionCall_Dict, NameArgsTuple
+from gptfunctionutil.types import AsyncFunction, DecoratedFunction, FunctionCall_Dict, NameArgsTuple, ToolCall_Union
 
 from .errors import *
 from .convertutil import ConvertStatic
@@ -38,6 +38,28 @@ class CommandSingleton:
         return CommandSingleton._commands.get(name, None)
 
 
+def sync_not_implemented(*args, **kwargs):
+    raise NotImplementedError("Sync method not added.")
+
+
+async def async_not_implemented(*args, **kwargs):
+    """
+    An asynchronous placeholder function that raises a NotImplementedError.
+
+    This function is intended to be used as a stub for asynchronous methods
+    that have not yet been implemented. It accepts any arguments and keyword
+    arguments but does not perform any operations.
+
+    Args:
+        *args: Variable-length positional arguments.
+        **kwargs: Arbitrary keyword arguments.
+
+    Raises:
+        NotImplementedError: Always raised to indicate the method is not implemented.
+    """
+    raise NotImplementedError("Async method not added.")
+
+
 class LibCommand:
     """This class is a container for functions that have been annotated with the
      LibParam and the AILibFunction decorators,
@@ -45,7 +67,7 @@ class LibCommand:
 
     def __init__(
         self,
-        func: Union[callable, Coroutine],
+        func: Union[Callable, AsyncFunction],
         name: str,
         description: str,
         required: List[str] = [],
@@ -66,11 +88,16 @@ class LibCommand:
             enabled (bool, optional): Indicates whether the command is enabled. Defaults to True.
         """
         self.command = func
+        self.syncr: Callable = sync_not_implemented
+        self.asyncr: AsyncFunction = async_not_implemented
         self.internal_name = self.function_name = name
         self.comm_type = "callable"
 
         if inspect.iscoroutinefunction(func):
             self.comm_type = "coroutine"
+            self.asyncr = func
+        else:
+            self.syncr = func  # type: ignore
         logs.info("initalizing %s, comm type is %s", self.function_name, self.comm_type)
         my_schema = {
             "name": self.function_name,
@@ -95,7 +122,7 @@ class LibCommand:
         dictionary with parameter information.
         Every parameter that is not decorated with a valid type will not be added!
         """
-        func = self.command
+        func: DecoratedFunction = self.command  # type: ignore
         paramdict = {}
         param_decorators = {}
 
@@ -104,25 +131,16 @@ class LibCommand:
             paramdict = sig.parameters
             param_decorators = func.parameter_decorators
 
-        self.function_schema.update(
-            {"parameters": {"type": "object", "properties": {}, "required": []}}
-        )
+        self.function_schema.update({"parameters": {"type": "object", "properties": {}, "required": []}})
         for param_name, param in paramdict.items():
             decs = param_decorators.get(param_name, "")
 
-            param_info, converter = ConvertStatic.parameter_into_schema(
-                param_name, param, dec=decs
-            )
+            param_info, converter = ConvertStatic.parameter_into_schema(param_name, param, dec=decs)
 
             if param_info is not None:
                 self.param_converters[param_name] = converter
-                self.function_schema["parameters"]["properties"][param_name] = (
-                    param_info
-                )
-                if (
-                    param.default == inspect.Parameter.empty
-                    or param_name in self.required
-                ):
+                self.function_schema["parameters"]["properties"][param_name] = param_info
+                if param.default == inspect.Parameter.empty or param_name in self.required:
                     self.function_schema["parameters"]["required"].append(param_name)
 
             # if isinstance(param.annotation, str):
@@ -155,8 +173,8 @@ class LibCommand:
         with the Converters.
 
         Args:
-            function_args (Dict[str, Any]): A dictionary containing the function arguments, returned by
-            gpt-3.5-turbo-0613
+            function_args (Dict[str, Any]): A dictionary containing the function arguments,
+            returned by the LLM of your choice.
 
         Returns:
             Dict[str, Any]: The converted function argument dictionary.
@@ -173,9 +191,7 @@ class LibCommand:
             if i in function_args:
                 converter = self.param_converters[i]
 
-                result = ConvertStatic.schema_validate(
-                    i, function_args[i], v, converter
-                )
+                result = ConvertStatic.schema_validate(i, function_args[i], v, converter)
 
                 logs.info("arg %s converted into %s", i, result)
                 function_args[i] = result
@@ -318,14 +334,10 @@ class GPTFunctionLibrary:
             )
         return function_args
 
-    def parse_name_args(
-        self, function_dict: FunctionCall_Dict
-    ) -> Union[NameArgsTuple, None]:
+    def parse_name_args(self, function_dict: FunctionCall_Dict) -> NameArgsTuple:
         """Parse the args within function_dict, and apply any needed corrections to the JSON."""
         function_name: str = function_dict.get("name", "")
-        function_args: Union[str, Dict[str, Any], None] = function_dict.get(
-            "arguments", None
-        )
+        function_args: Union[str, Dict[str, Any], None] = function_dict.get("arguments", None)
 
         if function_name in self.FunctionDict:
             if isinstance(function_args, str):
@@ -352,7 +364,9 @@ class GPTFunctionLibrary:
                     function_args = json.loads(function_args_str, strict=False)
                 except json.JSONDecodeError as e:
                     # Something went wrong while parsing, return where.
-                    output: str = f"JSONDecodeError: {e.msg} at line {e.lineno} column {e.colno}: `{function_args_str[e.pos]}`"
+                    output: str = (
+                        f"JSONDecodeError: {e.msg} at line {e.lineno} column {e.colno}: `{function_args_str[e.pos]}`"
+                    )
                     raise ArgDecodeError(
                         function_name=function_name,
                         arguments=function_args_str,
@@ -363,9 +377,7 @@ class GPTFunctionLibrary:
 
         raise FunctionNotFound(function_name=function_name, arguments=function_args)
 
-    def convert_args(
-        self, function_name: str, function_args: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def convert_args(self, function_name: str, function_args: Dict[str, Any]) -> Dict[str, Any]:
         """Preform any needed conversion of the function arguments."""
         libmethod = self.FunctionDict[function_name]
 
@@ -378,7 +390,7 @@ class GPTFunctionLibrary:
         output += "\n```{function_args}```"
         return output
 
-    def call_by_dict(self, function_dict: Dict[str, Any]) -> Any:
+    def call_by_dict(self, function_dict: FunctionCall_Dict) -> Any:
         """
         Call a function based on the provided dictionary.
 
@@ -400,7 +412,11 @@ class GPTFunctionLibrary:
 
             result = str(e)
             return result
-        libmethod: LibCommand = self.FunctionDict.get(function_name)
+
+        libmethod = self.FunctionDict.get(function_name)
+        if not libmethod:
+            raise AttributeError(f"Method '{function_name}' not found or not callable.")
+
         if libmethod.comm_type == "callable":
             function_args = libmethod.convert_args(function_args)
             if len(function_args) > 0:
@@ -411,7 +427,7 @@ class GPTFunctionLibrary:
         else:
             raise AttributeError(f"Method '{function_name}' not found or not callable.")
 
-    async def call_by_dict_async(self, function_dict: Dict[str, Any]):
+    async def call_by_dict_async(self, function_dict: FunctionCall_Dict):
         """
         Call an function based on the provided dictionary.
         This function works with coroutines.
@@ -435,21 +451,23 @@ class GPTFunctionLibrary:
             result = str(e)
             return result
         libmethod = self.FunctionDict.get(function_name)
+        if not libmethod:
+            raise AttributeError(f"Method '{function_name}' not found or not callable.")
 
         if libmethod.comm_type == "coroutine":
             if len(function_args) > 0:
-                return await libmethod.command(self, **function_args)
-            return await libmethod.command(self)
+                return await libmethod.asyncr(self, **function_args)
+            return await libmethod.asyncr(self)
 
         elif libmethod.comm_type == "callable":
             function_args = libmethod.convert_args(function_args)
             if len(function_args) > 0:
-                return libmethod.command(self, **function_args)
-            return libmethod.command(self)
+                return libmethod.syncr(self, **function_args)
+            return libmethod.syncr(self)
         else:
             raise AttributeError(f"Method '{function_name}' not found or not callable.")
 
-    def call_by_tool(self, tool_call: Any):
+    def call_by_tool(self, tool_call: ToolCall_Union):
         """
         Call a function based on the syntax from the tool object.
 
@@ -474,7 +492,7 @@ class GPTFunctionLibrary:
         }
         return append_id_if_present(out, tool_call)
 
-    async def call_by_tool_async(self, tool_call: Any):
+    async def call_by_tool_async(self, tool_call: ToolCall_Union):
         """
         Asyncio version of call by tool.
         Call a function based on the syntax from the tool object.
@@ -526,7 +544,7 @@ def LibParamSpec(name: str, description: str, **kwargs):
         The decorated function.
     """
 
-    def decorator(func: callable) -> callable:
+    def decorator(func: DecoratedFunction) -> DecoratedFunction:
         if not hasattr(func, "parameter_decorators"):
             func.parameter_decorators = {}
         gen = genspec(name, description, **kwargs)
@@ -546,7 +564,7 @@ def LibParam(**kwargs: Any) -> Any:
         The decorated function.
     """
 
-    def decorator(func: callable) -> callable:
+    def decorator(func: DecoratedFunction) -> DecoratedFunction:
         if not hasattr(func, "parameter_decorators"):
             func.parameter_decorators = {}
         func.parameter_decorators.update(kwargs)
@@ -585,10 +603,8 @@ def AILibFunction(
         callable, Coroutine, or Command.
     """
 
-    def decorator(func: Union[callable, Coroutine]):
-        mycommand = LibCommand(
-            func, name, description, required, force_words, enabled, strict
-        )
+    def decorator(func: DecoratedFunction):
+        mycommand = LibCommand(func, name, description, required, force_words, enabled, strict)
         func.libcommand = mycommand
 
         return func

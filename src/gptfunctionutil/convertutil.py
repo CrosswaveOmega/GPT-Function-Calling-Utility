@@ -56,19 +56,19 @@ class ConvertStatic:
 
     @staticmethod
     def parameter_into_schema(
-        param_name: str, param: inspect.Parameter, dec: Union[str, Dict[str, any]]
-    ) -> Tuple[Dict[str, any], Type[Converter]]:
+        param_name: str, param: inspect.Parameter, dec: Union[str, Dict[str, Any]]
+    ) -> Tuple[Dict[str, Any], Type[Converter]]:
         """
         Converts a parameter signature into a schema.
 
         Parameters:
             param_name (str): The name of the parameter.
             param (inspect.Parameter): The parameter signature to convert .
-            dec (Union[str, Dict[str, any]]): Additional keywords to be added to the schema,
+            dec (Union[str, Dict[str, Any]]): Additional keywords to be added to the schema,
             including definition
 
         Returns:
-            Tuple[Dict[str, any], Type[Converter]]: The schema generated along with the Converter Class.
+            Tuple[Dict[str, Any], Type[Converter]]: The schema generated along with the Converter Class.
 
         Raises:
         ConversionToError: If conversion to schema fails.
@@ -105,21 +105,21 @@ class ConvertStatic:
     @staticmethod
     def schema_validate(
         param_name: str,
-        value: any,
-        schema: Union[str, Dict[str, any]],
+        value: Any,
+        schema: Union[str, Dict[str, Any]],
         converter: Converter,
     ) -> Any:
         """
-        Validate and apply any needed conversions to value based on schema.
+        Validate and apply Any needed conversions to value based on schema.
 
         Parameters:
         param_name (str): The name of the parameter.
-        value (any): The value to validate.
-        schema (Union[str, Dict[str, any]]): The schema to validate against.
+        value (Any): The value to validate.
+        schema (Union[str, Dict[str, Any]]): The schema to validate against.
         converter (Converter): The converter to use for validation.
 
         Returns:
-        any: The validated value.
+        Any: The validated value.
 
         Raises:
         ConversionFromError: If conversion from schema fails.

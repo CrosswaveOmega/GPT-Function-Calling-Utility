@@ -1,4 +1,4 @@
-from typing import Union, Dict, Any, Tuple
+from typing import Callable, Protocol, Union, Dict, Any, Tuple, Awaitable
 from typing_extensions import Literal, TypedDict
 import pydantic
 
@@ -8,7 +8,36 @@ __all__ = [
     "Ollama_ToolCall",
     "OpenAI_ChatCompletionMessageToolCall",
     "Function",
+    "AsyncFunction",
+    "ToolCall_Union",
+    "DecoratedFunction",
+    "DecoratedAsyncFunction",
 ]
+
+
+class DecoratedFunction(Protocol):
+    parameter_decorators: Dict[str, Any]
+    libcommand: Any
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        """
+        Allows the DecoratedFunction to be called like a regular function.
+        """
+        raise NotImplementedError("Subclasses must implement the __call__ method.")
+
+
+AsyncFunction = Callable[[Any, Any], Awaitable[Any]]
+
+
+class DecoratedAsyncFunction(Protocol):
+    parameter_decorators: Dict[str, Any]
+    libcommand: Any
+
+    async def __call__(self, *args: Any, **kwargs: Any) -> Awaitable[Any]:
+        """
+        Allows the DecoratedAsyncFunction to be called like a regular asynchronous function.
+        """
+        raise NotImplementedError("Subclasses must implement the __call__ method.")
 
 
 class FunctionCall_Dict(TypedDict):
@@ -49,3 +78,6 @@ class Ollama_ToolCall(pydantic.BaseModel):
 
     type: Literal["function"]
     """The type of the tool. Currently, only `function` is supported."""
+
+
+ToolCall_Union = Union[Ollama_ToolCall, OpenAI_ChatCompletionMessageToolCall]
